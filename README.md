@@ -10,28 +10,38 @@ module Main where
 
 import Pure hiding (Transition,Animation)
 import Pure.Transition as T
+import Pure.Theme
 
 import Pure.Data.CSS
 
-main = inject body $ flip ComponentIO () $ \self -> 
+import Control.Monad
+
+main = do
+  inject Pure.head $ css $ is "body" .> do
+    height =: per 100
+    width  =: per 100
+    
+  inject body $ flip ComponentIO () $ \self -> 
     let 
         upd = modify_ self . const
 
-        add = upd (\(n,xs) -> (n + 1,xs ++ [n]))
-        rem = upd (\(n,xs) -> (n + 1,safeTail xs))
+        add = upd (():)
 
-        safeTail [] = []
-        safeTail xs = tail xs
-
-        t n = (n,Div <| Width (pxs 90) . Height (pxs 90) . BackgroundColor blue)
+        block _ = 
+            Transition def <| TransitionOnMount True 
+                            . OnComplete (const add) 
+                            . Animation T.drop
+                            . Theme Block
 
     in def
-            { construct = return (0,[])
-            , render = \_ (_,xs) -> 
-                Div <||>
-                  [ Button <| OnClick (\_ -> add) |> [ "Add" ]
-                  , Button <| OnClick (\_ -> rem) |> [ "Remove" ]
-                  , T.Group def <| Animation fadeDown |#> ( map t xs )
-                  ]
+            { construct = return [()]
+            , render = \_ xs -> Div <||> ( map block xs )
             }
+
+data Block = Block
+instance Themeable Block where
+    theme c _ = void $ is c .> do
+        width           =: pxs 90
+        height          =: pxs 90
+        backgroundColor =: blue
 ```
