@@ -16,12 +16,7 @@ import Pure.Data.CSS
 
 import Control.Monad
 
-main = do
-  inject Pure.head $ css $ is "body" .> do
-    height =: per 100
-    width  =: per 100
-    
-  inject body $ flip ComponentIO () $ \self -> 
+main = inject body $ flip ComponentIO () $ \self -> 
     let 
         upd = modify_ self . const
 
