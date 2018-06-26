@@ -500,7 +500,7 @@ instance Default AnimationStyles where
         onOut = return ()
 
 data Browse = Browse
-browse = SomeTheme Browse
+browse = Theme (SomeTheme Browse)
 instance Themeable Browse where
     theme c _ = renderAnimationStyles c def 
         { onTransition = void $ apply $ animDur 500
@@ -513,7 +513,7 @@ instance Themeable Browse where
             keyframes "browseIn" $ do
                 let f p s z mo = 
                         is (per p) .> do
-                            trans $ scale(s) <<>> translateZ(pxs 0)
+                            trans $ Pure.Data.Styles.scale(s) <<>> translateZ(pxs 0)
                             zIndex =: z
                             maybe (return ()) (\o -> void $ opacity =: o) mo
                 f 0   (dec 0.8)  (neg one)  Nothing
@@ -543,7 +543,7 @@ instance Themeable Browse where
         }
 
 data Drop = Drop
-drop = SomeTheme Drop
+drop = Theme (SomeTheme Drop)
 instance Themeable Drop where
     theme c _ = renderAnimationStyles c def
       { onTransition = void $ apply $ do
@@ -556,21 +556,21 @@ instance Themeable Drop where
         keyframes "dropIn" $ do
             is (per 0) .> do
                 opacity =: zero
-                trans $ scale zero
+                trans $ Pure.Data.Styles.scale zero
             is (per 100) .> do
                 opacity =: one
-                trans $ scale one
+                trans $ Pure.Data.Styles.scale one
         keyframes "dropOut" $ do
             is (per 0)    .> do
                 opacity =: one
-                trans $ scale one
+                trans $ Pure.Data.Styles.scale one
             is (per 100) .> do
                 opacity =: zero
-                trans $ scale zero
+                trans $ Pure.Data.Styles.scale zero
       }
 
 data Fade = Fade
-fade = SomeTheme Fade
+fade = Theme (SomeTheme Fade)
 instance Themeable Fade where
     theme c _ = renderAnimationStyles c def
       { onIn = void $ apply $ animName "fadeIn"
@@ -585,7 +585,7 @@ instance Themeable Fade where
       }
 
 data FadeUp = FadeUp
-fadeUp = SomeTheme FadeUp
+fadeUp = Theme (SomeTheme FadeUp)
 instance Themeable FadeUp where
     theme c _ = renderAnimationStyles c def
       { onIn = void $ apply $ animName "fadeInUp"
@@ -608,7 +608,7 @@ instance Themeable FadeUp where
       }
 
 data FadeDown = FadeDown
-fadeDown = SomeTheme FadeDown
+fadeDown = Theme (SomeTheme FadeDown)
 instance Themeable FadeDown where
     theme c _ = renderAnimationStyles c def
       { onIn = void $ apply $ animName "fadeInDown"
@@ -631,7 +631,7 @@ instance Themeable FadeDown where
       }
 
 data FadeLeft = FadeLeft
-fadeLeft = SomeTheme FadeLeft
+fadeLeft = Theme (SomeTheme FadeLeft)
 instance Themeable FadeLeft where
     theme c _ = renderAnimationStyles c def
       { onIn = void $ apply $ animName "fadeInLeft"
@@ -654,7 +654,7 @@ instance Themeable FadeLeft where
       }
 
 data FadeRight = FadeRight
-fadeRight = SomeTheme FadeRight
+fadeRight = Theme (SomeTheme FadeRight)
 instance Themeable FadeRight where
     theme c _ = renderAnimationStyles c def
       { onIn = void $ apply $ animName "fadeInRight"
@@ -677,7 +677,7 @@ instance Themeable FadeRight where
       }
 
 data HorizontalFlip = HorizontalFlip
-horizontalFlip = SomeTheme HorizontalFlip
+horizontalFlip = Theme (SomeTheme HorizontalFlip)
 instance Themeable HorizontalFlip where
     theme c _ = renderAnimationStyles c def
       { onIn = void $ apply $ animName "horizontalFlipIn"
@@ -697,5 +697,166 @@ instance Themeable HorizontalFlip where
             is (per 100) .> do
                 opacity =: zero
                 trans (persp (pxs 2000) <<>> rotY(deg 90))
+      }
 
+data VerticalFlip = VerticalFlip
+verticalFlip = Theme (SomeTheme VerticalFlip)
+instance Themeable VerticalFlip where
+    theme c _ = renderAnimationStyles c def
+      { onIn = void $ apply $ animName "verticalFlipIn"
+      , onOut = void $ apply $ animName "verticalFlitOut"
+      , animationStyles = void $ do
+        keyframes "verticalFlipIn" $ do
+            is (per 0) .> do
+                opacity =: zero
+                trans (persp (pxs 2000) <<>> rotX(neg (deg 90)))
+            is (per 100) .> do
+                opacity =: one
+                trans (persp (pxs 2000) <<>> rotX(deg 0))
+        keyframes "verticalFlipOut" $ do
+            is (per 0) .> do
+                opacity =: one
+                trans (persp (pxs 2000) <<>> rotX(deg 0))
+            is (per 100) .> do
+                opacity =: zero
+                trans (persp (pxs 2000) <<>> rotX(deg 90))
+      }
+
+data Scale = Scale
+scale = Theme (SomeTheme Scale)
+instance Themeable Scale where
+    theme c _ = renderAnimationStyles c def
+      { onIn = void $ apply $ animName "scaleIn"
+      , onOut = void $ apply $ animName "scaleOut"
+      , animationStyles = void $ do
+        keyframes "scaleIn" $ do
+            is (per 0) .> do
+                opacity =: zero
+                trans $ Pure.Data.Styles.scale (dec 0.8)
+            is (per 100) .> do
+                opacity =: one
+                trans $ Pure.Data.Styles.scale (int 1)
+        keyframes "scaleOut" $ do
+            is (per 0) .> do
+                opacity =: one
+                trans $ Pure.Data.Styles.scale (int 1)
+            is (per 100) .> do
+                opacity =: zero
+                trans $ Pure.Data.Styles.scale (dec 0.9)
+      }
+
+data Fly = Fly
+fly = Theme (SomeTheme Fly)
+instance Themeable Fly where
+    theme c _ = renderAnimationStyles c def
+      { onIn = void $ apply $ animName "flyIn"
+      , onOut = void $ apply $ animName "flyOut"
+      , animationStyles = void $ do
+        let f p mo s3d = 
+              is (per p) .> do
+                maybe (return ()) (void . (opacity =:)) mo
+                trans $ scale3d (s3d,s3d,s3d)
+        keyframes "flyIn" $ do
+            f 0 (Just zero) 0.3
+            f 20 Nothing 1.1
+            f 40 Nothing 0.9
+            f 60 (Just one) 1.03
+            f 80 Nothing 0.97
+            f 100 (Just one) 1
+        keyframes "flyOut" $ do
+            f 20 Nothing 0.9
+            f 50 (Just one) 1.1
+            f 55 (Just one) 1.1
+            f 100 (Just zero) 0.3
+      }
+
+data FlyUp = FlyUp
+flyUp = Theme (SomeTheme FlyUp)
+instance Themeable FlyUp where
+    theme c _ = renderAnimationStyles c def
+      { onIn = void $ apply $ animName "flyInUp"
+      , onOut = void $ apply $ animName "flyOutUp"
+      , animationStyles = void $ do
+        let f p mo t3d = 
+              is (per p) .> do
+                maybe (return ()) (void . (opacity =:)) mo
+                trans $ translate3d (zero,s3d,zero)
+        keyframes "flyInUp" $ do
+            f 0 (Just zero) (pxs 1500)
+            f 60 (Just one) (neg (pxs 20))
+            f 75 Nothing (pxs 10)
+            f 90 Nothing (neg (pxs 5))
+            f 100 Nothing zero
+        keyframes "flyOutUp" $ do
+            f 20 Nothing (pxs 10)
+            f 40 (Just one) (neg (pxs 20))
+            f 45 (Just one) (neg (pxs 20))
+      }
+
+data FlyDown = FlyDown
+flyDown = Theme (SomeTheme FlyDown)
+instance Themeable FlyDown where
+    theme c _ = renderAnimationStyles c def
+      { onIn = void $ apply $ animName "flyInDown"
+      , onOut = void $ apply $ animName "flyOutDown"
+      , animationStyles = void $ do
+        let f p mo t3d =
+              is (per p) .> do
+                maybe (return ()) (void . (opacity =:)) mo
+                trans $ translate3d (zero,s3d,zero)
+        keyframes "flyInDown" $ do
+            f 0 (Just zero) (neg (pxs 1500))
+            f 60 (Just one) (pxs 25)
+            f 75 Nothing (neg (pxs 10))
+            f 90 Nothing (neg (pxs 5))
+            is (per 100) .> trans "none"
+        keyframes "flyOutDown" $ do
+            f 20 Nothing (neg (pxs 10))
+            f 40 (Just one) (pxs 20)
+            f 45 (Just one) (pxs 20)
+            f 100 (Just zero) (neg (pxs 2000))
+      }
+
+data FlyLeft = FlyLeft
+flyLeft = Theme (SomeTheme FlyLeft)
+instance Themeable FlyLeft where
+    theme c _ = renderAnimationStyles c def
+      { onIn = void $ apply $ animName "flyInLeft"
+      , onOut = void $ apply $ animName "flyOutLeft"
+      , animationStyles = void $ do
+        let f p mo t3d =
+              is (per p) .> do
+                maybe (return ()) (void . (opacity =:)) mo
+                trans $ translate3d (s3d,zero,zero)
+        keyframes "flyInLeft" $ do
+            f 0 (Just zero) (pxs 1500)
+            f 60 (Just one) (neg (pxs 25))
+            f 75 Nothing (pxs 10)
+            f 90 Nothing (neg (pxs 5))
+            is (per 100) .> trans "none"
+        keyframes "flyOutLeft" $ do
+            f 20 (Just one) (neg (pxs 20))
+            f 100 (Just zero) (pxs 2000)
+      }
+
+data FlyRight = FlyRight
+flyRight = Theme (SomeTheme FlyRight)
+instance Themeable FlyRight where
+    theme c _ = renderAnimationStyles c def
+      { onIn = void $ apply $ animName "flyInRight"
+      , onOut = void $ apply $ animName "flyOutRight"
+      , animationStyles = void $ do
+        let f p mo t3d =
+              is (per p) .> do
+                maybe (return ()) (void . (opacity =:)) mo
+                trans $ translate3d (s3d,zero,zero)
+        keyframes "flyInRight" $ do
+            f 0 (Just zero) (neg (pxs 1500))
+            f 60 (Just one) (pxs 25)
+            f 75 Nothing (neg (pxs 10))
+            f 90 Nothing (pxs 5)
+            is (per 100) .> trans "none"
+        keyframes "flyOutRight" $ do
+            f 20 (Just one) (pxs 20)
+            f 100 (Just zero) (neg (pxs 2000))
       }
