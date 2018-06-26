@@ -502,7 +502,6 @@ instance Default AnimationStyles where
 data Browse = Browse
 browse = SomeTheme Browse
 instance Themeable Browse where
-    namespace _ = NS "browse"
     theme c _ = renderAnimationStyles c def 
         { onTransition = void $ apply $ animDur 500
         , onIn = void $ apply $ animName "browseIn"
@@ -546,7 +545,6 @@ instance Themeable Browse where
 data Drop = Drop
 drop = SomeTheme Drop
 instance Themeable Drop where
-    namespace _ = NS "drop"
     theme c _ = renderAnimationStyles c def
       { onTransition = void $ apply $ do
         transOrigin (top <<>> center)
@@ -574,7 +572,6 @@ instance Themeable Drop where
 data Fade = Fade
 fade = SomeTheme Fade
 instance Themeable Fade where
-    namespace _ = NS "fade"
     theme c _ = renderAnimationStyles c def
       { onIn = void $ apply $ animName "fadeIn"
       , onOut = void $ apply $ animName "fadeOut"
@@ -590,7 +587,6 @@ instance Themeable Fade where
 data FadeUp = FadeUp
 fadeUp = SomeTheme FadeUp
 instance Themeable FadeUp where
-    namespace _ = NS "fade-up"
     theme c _ = renderAnimationStyles c def
       { onIn = void $ apply $ animName "fadeInUp"
       , onOut = void $ apply $ animName "fadeOutUp"
@@ -614,7 +610,6 @@ instance Themeable FadeUp where
 data FadeDown = FadeDown
 fadeDown = SomeTheme FadeDown
 instance Themeable FadeDown where
-    namespace _ = NS "fade-down"
     theme c _ = renderAnimationStyles c def
       { onIn = void $ apply $ animName "fadeInDown"
       , onOut = void $ apply $ animName "fadeOutDown"
@@ -638,7 +633,6 @@ instance Themeable FadeDown where
 data FadeLeft = FadeLeft
 fadeLeft = SomeTheme FadeLeft
 instance Themeable FadeLeft where
-    namespace _ = NS "fade-left"
     theme c _ = renderAnimationStyles c def
       { onIn = void $ apply $ animName "fadeInLeft"
       , onOut = void $ apply $ animName "fadeOutLeft" 
@@ -662,7 +656,6 @@ instance Themeable FadeLeft where
 data FadeRight = FadeRight
 fadeRight = SomeTheme FadeRight
 instance Themeable FadeRight where
-    namespace _ = NS "fade-right" 
     theme c _ = renderAnimationStyles c def
       { onIn = void $ apply $ animName "fadeInRight"
       , onOut = void $ apply $ animName "fadeOutRight"
@@ -686,7 +679,6 @@ instance Themeable FadeRight where
 data HorizontalFlip = HorizontalFlip
 horizontalFlip = SomeTheme HorizontalFlip
 instance Themeable HorizontalFlip where
-    namespace _ = NS "horizontal-flip"
     theme c _ = renderAnimationStyles c def
       { onIn = void $ apply $ animName "horizontalFlipIn"
       , onOut = void $ apply $ animName "horizontalFlipOut"
