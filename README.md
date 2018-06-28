@@ -8,8 +8,8 @@ Easy-to-use transitions and transition groups for pure.
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
-import Pure hiding (Transition,Animation)
-import Pure.Transition as T
+import Pure hiding (Transition)
+import Pure.Transition
 import Pure.Theme
 
 import Pure.Data.CSS
