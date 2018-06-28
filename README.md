@@ -25,7 +25,7 @@ main = inject body $ flip ComponentIO () $ \self ->
         block _ = 
             Transition def <| TransitionOnMount True 
                             . OnComplete (const add) 
-                            . Animation T.drop
+                            . InAnimation dropIn
                             . Theme Block
 
     in def
