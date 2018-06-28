@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, ViewPatterns #-}
 module Pure.Transition.Utils where
 
 import Control.Applicative
@@ -52,6 +52,8 @@ persp p = "perspective(" <> p <> ")"
 rotY ry = "rotateY(" <> ry <> ")"
 rotX rx = "rotateX(" <> rx <> ")"
 
+scale3 (dec -> s3d) = "scale3d(" <> s3d <&>> s3d <&>> s3d <> ")"
+
 animIter n = do
     "-webkit-animation-iteration-count" =: n
     "animation-iteration-count"        =: n
@@ -75,6 +77,10 @@ trans t = do
 transOrigin to = do
     "-webkit-transform-origin" =: to
     "transform-origin" =: to
+
+transTiming t = do
+    "-webkit-transition-timing-function" =: cubicBezier(t)
+    "transition-timing-function" =: cubicBezier(t)
 
 animTiming t = do
     "-webkit-animation-timing-function" =: cubicBezier(t)
