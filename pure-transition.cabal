@@ -18,7 +18,8 @@ library
     pure-cond >= 0.7 && < 1,
     pure-theme >= 0.1 && < 1,
     pure-styles >= 0.7 && < 1,
-    pure-txt >= 0.7 && < 1
+    pure-txt >= 0.7 && < 1,
+    pure-prop >= 0.7 && < 1
   exposed-modules: 
     Pure.Transition
     Pure.Transition.Utils

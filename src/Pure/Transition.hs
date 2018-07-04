@@ -13,6 +13,9 @@ import Pure.Data.CSS
 -- from pure-theme
 import Pure.Theme
 
+-- from pure-prop
+import Pure.Data.Prop
+
 -- from pure-styles
 import Pure.Data.Styles hiding (visible,animation)
 
@@ -31,11 +34,6 @@ import Pure.Transition.Utils
 
 import Debug.Trace
 import Unsafe.Coerce
-
-class HasProp p a where
-    type Prop p a :: *
-    getProp :: p -> a -> Prop p a
-    setProp :: p -> Prop p a -> a -> a
 
 data As = As_
 pattern As :: HasProp As a => Prop As a -> a -> a
