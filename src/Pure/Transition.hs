@@ -1,4 +1,4 @@
-{-# LANGUAGE PatternSynonyms, ViewPatterns, TypeFamilies, KindSignatures, OverloadedStrings, MultiWayIf, ExistentialQuantification, DuplicateRecordFields, RecordWildCards, MultiParamTypeClasses, DeriveGeneric, DeriveAnyClass #-}
+{-# LANGUAGE PatternSynonyms, ViewPatterns, TypeFamilies, KindSignatures, OverloadedStrings, MultiWayIf, ExistentialQuantification, DuplicateRecordFields, RecordWildCards, MultiParamTypeClasses, DeriveGeneric, DeriveAnyClass, FlexibleContexts #-}
 module Pure.Transition where
 
 -- from pure
