@@ -2,7 +2,7 @@
 module Pure.Transition where
 
 -- from pure
-import Pure hiding (Transition,Left,Right,animation,visible)
+import Pure hiding (Transition,Left,Right,ZoomIn,ZoomOut,animation,visible)
 
 -- from pure-cond
 import Pure.Data.Cond
