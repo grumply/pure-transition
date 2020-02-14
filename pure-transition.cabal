@@ -1,25 +1,28 @@
 name:                pure-transition
-version:             0.7.0.0
--- synopsis:            
--- description:         
+version:             0.8.0.0
+homepage:            purehs.org/doc/pure-transition
 license:             BSD3
 license-file:        LICENSE
-author:              Sean Mackenzie
-maintainer:          sean@grump.ly
+author:              Sean Hickman
+maintainer:          sean@grumply.com
 category:            Web
 build-type:          Simple
 cabal-version:       >=1.10
 
+source-repository head
+  type: git
+  location: https://github.com/grumply/pure-transition.git
+
 library
   build-depends:
-    base >=4.9,
-    pure >= 0.7 && < 1,
-    pure-css >= 0.7 && < 1,
-    pure-cond >= 0.7 && < 1,
-    pure-theme >= 0.1 && < 1,
-    pure-styles >= 0.7 && < 1,
-    pure-txt >= 0.7 && < 1,
-    pure-prop >= 0.7 && < 1
+    base,
+    pure,
+    pure-css,
+    pure-cond,
+    pure-theme,
+    pure-styles,
+    pure-txt,
+    pure-prop
   exposed-modules: 
     Pure.Transition
     Pure.Transition.Utils
