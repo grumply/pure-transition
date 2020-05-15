@@ -1,4 +1,8 @@
-{-# LANGUAGE PatternSynonyms, ViewPatterns, TypeFamilies, KindSignatures, OverloadedStrings, MultiWayIf, ExistentialQuantification, DuplicateRecordFields, RecordWildCards, MultiParamTypeClasses, DeriveGeneric, DeriveAnyClass, FlexibleContexts #-}
+{-# LANGUAGE PatternSynonyms, ViewPatterns, TypeFamilies, KindSignatures, 
+    OverloadedStrings, MultiWayIf, ExistentialQuantification, 
+    DuplicateRecordFields, RecordWildCards, MultiParamTypeClasses, 
+    DeriveGeneric, DeriveAnyClass, FlexibleContexts, TypeApplications, 
+    ScopedTypeVariables #-}
 module Pure.Transition where
 
 -- from pure
@@ -7,11 +11,9 @@ import Pure hiding (Transition,Left,Right,ZoomIn,ZoomOut,animation,visible)
 -- from pure-cond
 import Pure.Data.Cond
 
--- from pure-css
-import Pure.Data.CSS
-
 -- from pure-theme
-import Pure.Theme
+import Pure.Theme hiding (visible)
+import qualified Pure.Theme as CSS
 
 -- from pure-prop
 import Pure.Data.Prop
@@ -285,8 +287,8 @@ instance Pure Transition where
                               (status /= Unmounted) #
                                   case (inAnimation,outAnimation) of
                                       (SomeInTheme it,SomeOutTheme ot) ->
-                                          as ( Theme it
-                                             $ Theme ot
+                                          as ( themed it
+                                             $ themed ot
                                              $ Classes (animationClasses []) 
                                              $ Styles (animationStyles [])
                                              $ features
@@ -466,10 +468,10 @@ instance HasProp AnimationDuration Group where
 
 -- Transitions from semantic-ui: https://github.com/Semantic-Org/Semantic-UI-CSS/blob/master/components/transition.css
 
-data SomeInTheme = forall t. Themeable t => SomeInTheme t
+data SomeInTheme = forall t. Theme t => SomeInTheme t
 instance Default SomeInTheme where def = Pure.Transition.fadeIn
 
-data SomeOutTheme = forall t. Themeable t => SomeOutTheme t
+data SomeOutTheme = forall t. Theme t => SomeOutTheme t
 instance Default SomeOutTheme where def = fadeOut
 
 data AnimationStyles 
@@ -493,8 +495,8 @@ data AnimationStyles
 data NoAnimation = NoAnimation 
 noInAnimation = SomeInTheme NoAnimation
 noOutAnimation = SomeOutTheme NoAnimation
-instance Themeable NoAnimation where
-    theme _ _ = return ()
+instance Theme NoAnimation where
+    theme _ = return ()
 
 simpleInAnimation name frames = InAnimationStyles
     { animationStyles = defaultAnimationStyles
@@ -578,8 +580,8 @@ browseInAnimation = InAnimationStyles
         f 80  (dec 1.05) "999" (Just "1")
         f 100 (dec 1.05) "999" Nothing
     }
-instance Themeable BrowseIn where
-    theme c _ = renderAnimationStyles c browseInAnimation
+instance Theme BrowseIn where
+    theme c = renderAnimationStyles c browseInAnimation
 
 data BrowseOutLeft = BrowseOutLeft
 browseOutLeft = SomeOutTheme BrowseOutLeft
@@ -599,8 +601,8 @@ browseOutLeftAnimation = OutAnimationStyles
         is (per 80) .> opacity =: one
         f 100 (neg one) (per 0) (deg 0) (deg 0) (Just (neg (pxs 10))) (Just zero)
     }
-instance Themeable BrowseOutLeft where
-    theme c _ = renderAnimationStyles c browseOutLeftAnimation
+instance Theme BrowseOutLeft where
+    theme c = renderAnimationStyles c browseOutLeftAnimation
 
 data BrowseOutRight = BrowseOutRight
 browseOutRight = SomeOutTheme BrowseOutRight
@@ -620,8 +622,8 @@ browseOutRightAnimation = OutAnimationStyles
         is (per 80) .> opacity =: one
         f 100 one (per 0) (deg 0) (deg 0) (Just (neg (pxs 10))) (Just zero)
     }
-instance Themeable BrowseOutRight where
-    theme c _ = renderAnimationStyles c browseOutRightAnimation
+instance Theme BrowseOutRight where
+    theme c = renderAnimationStyles c browseOutRightAnimation
 
 data DropIn = DropIn
 dropIn = SomeInTheme DropIn
@@ -640,8 +642,8 @@ dropInAnimation = InAnimationStyles
               opacity =: one
               trans $ Pure.Data.Styles.scale one
     }
-instance Themeable DropIn where
-    theme c _ = renderAnimationStyles c dropInAnimation
+instance Theme DropIn where
+    theme c = renderAnimationStyles c dropInAnimation
 
 data DropOut = DropOut
 dropOut = SomeOutTheme DropOut
@@ -660,24 +662,24 @@ dropOutAnimation = OutAnimationStyles
               opacity =: zero
               trans $ Pure.Data.Styles.scale zero
     }
-instance Themeable DropOut where
-    theme c _ = renderAnimationStyles c dropOutAnimation
+instance Theme DropOut where
+    theme c = renderAnimationStyles c dropOutAnimation
 
 data FadeIn = FadeIn
 fadeIn = SomeInTheme FadeIn
 fadeInAnimation = simpleInAnimation "fadeIn" $ do
     is (per 0)   .> opacity =: zero
     is (per 100) .> opacity =: one
-instance Themeable FadeIn where
-    theme c _ = renderAnimationStyles c fadeInAnimation
+instance Theme FadeIn where
+    theme c = renderAnimationStyles c fadeInAnimation
 
 data FadeOut = FadeOut
 fadeOut = SomeOutTheme FadeOut
 fadeOutAnimation = simpleOutAnimation "fadeOut" $ do
     is (per 0)   .> opacity =: one
     is (per 100) .> opacity =: zero
-instance Themeable FadeOut where
-    theme c _ = renderAnimationStyles c fadeOutAnimation
+instance Theme FadeOut where
+    theme c = renderAnimationStyles c fadeOutAnimation
 
 data FadeInUp = FadeInUp
 fadeInUp = SomeInTheme FadeInUp
@@ -688,8 +690,8 @@ fadeInUpAnimation = simpleInAnimation "fadeInUp" $ do
     is (per 100) .> do
         opacity =: one
         trans (translateY(per 0))
-instance Themeable FadeInUp where
-    theme c _ = renderAnimationStyles c fadeInUpAnimation
+instance Theme FadeInUp where
+    theme c = renderAnimationStyles c fadeInUpAnimation
 
 data FadeOutUp = FadeOutUp
 fadeOutUp = SomeOutTheme FadeOutUp
@@ -700,8 +702,8 @@ fadeOutUpAnimation = simpleOutAnimation "fadeOutUp" $ do
     is (per 100) .> do
         opacity =: zero
         trans (translateY(per 5))
-instance Themeable FadeOutUp where
-    theme c _ = renderAnimationStyles c fadeOutUpAnimation
+instance Theme FadeOutUp where
+    theme c = renderAnimationStyles c fadeOutUpAnimation
 
 data FadeInDown = FadeInDown
 fadeInDown = SomeInTheme FadeInDown
@@ -712,8 +714,8 @@ fadeInDownAnimation = simpleInAnimation "fadeInDown" $ do
     is (per 100) .> do
         opacity =: one
         trans (translateY(per 0))
-instance Themeable FadeInDown where
-    theme c _ = renderAnimationStyles c fadeInDownAnimation
+instance Theme FadeInDown where
+    theme c = renderAnimationStyles c fadeInDownAnimation
 
 data FadeOutDown = FadeOutDown
 fadeOutDown = SomeOutTheme FadeOutDown
@@ -724,8 +726,8 @@ fadeOutDownAnimation = simpleOutAnimation "fadeOutDown" $ do
     is (per 100) .> do
         opacity =: zero
         trans (translateY(neg (per 5)))
-instance Themeable FadeOutDown where
-    theme c _ = renderAnimationStyles c fadeOutDownAnimation
+instance Theme FadeOutDown where
+    theme c = renderAnimationStyles c fadeOutDownAnimation
 
 data FadeInLeft = FadeInLeft
 fadeInLeft = SomeInTheme FadeInLeft
@@ -736,8 +738,8 @@ fadeInLeftAnimation = simpleInAnimation "fadeInLeft" $ do
     is (per 100) .> do
         opacity =: one
         trans (translateX(per 0))
-instance Themeable FadeInLeft where
-    theme c _ = renderAnimationStyles c fadeInLeftAnimation
+instance Theme FadeInLeft where
+    theme c = renderAnimationStyles c fadeInLeftAnimation
 
 data FadeOutLeft = FadeOutLeft
 fadeOutLeft = SomeOutTheme FadeOutLeft
@@ -748,8 +750,8 @@ fadeOutLeftAnimation = simpleOutAnimation "fadeOutLeft" $ do
     is (per 100) .> do
         opacity =: zero
         trans (translateX(per 5))
-instance Themeable FadeOutLeft where
-    theme c _ = renderAnimationStyles c fadeOutLeftAnimation
+instance Theme FadeOutLeft where
+    theme c = renderAnimationStyles c fadeOutLeftAnimation
 
 data FadeInRight = FadeInRight
 fadeInRight = SomeInTheme FadeInRight
@@ -760,8 +762,8 @@ fadeInRightAnimation = simpleInAnimation "fadeInRight" $ do
     is (per 100) .> do
         opacity =: one
         trans (translateX(per 0))
-instance Themeable FadeInRight where
-    theme c _ = renderAnimationStyles c fadeInRightAnimation
+instance Theme FadeInRight where
+    theme c = renderAnimationStyles c fadeInRightAnimation
 
 data FadeOutRight = FadeOutRight
 fadeOutRight = SomeOutTheme FadeOutRight
@@ -772,8 +774,8 @@ fadeOutRightAnimation = simpleOutAnimation "fadeOutRight" $ do
     is (per 100) .> do
         opacity =: zero
         trans (translateX(neg (per 5)))
-instance Themeable FadeOutRight where
-    theme c _ = renderAnimationStyles c fadeOutRightAnimation
+instance Theme FadeOutRight where
+    theme c = renderAnimationStyles c fadeOutRightAnimation
 
 data HorizontalFlipIn = HorizontalFlipIn
 horizontalFlipIn = SomeInTheme HorizontalFlipIn
@@ -784,8 +786,8 @@ horizontalFlipInAnimation = simpleInAnimation "horizontalFlipIn" $ do
     is (per 100) .> do
         opacity =: one
         trans (persp (pxs 2000) <<>> rotY(deg 0))
-instance Themeable HorizontalFlipIn where
-    theme c _ = renderAnimationStyles c horizontalFlipInAnimation
+instance Theme HorizontalFlipIn where
+    theme c = renderAnimationStyles c horizontalFlipInAnimation
 
 data HorizontalFlipOut = HorizontalFlipOut
 horizontalFlipOut = SomeOutTheme HorizontalFlipOut
@@ -796,8 +798,8 @@ horizontalFlipOutAnimation = simpleOutAnimation "horizontalFlipOut" $ do
     is (per 100) .> do
         opacity =: zero
         trans (persp (pxs 2000) <<>> rotY(deg 90))
-instance Themeable HorizontalFlipOut where
-    theme c _ = renderAnimationStyles c horizontalFlipOutAnimation
+instance Theme HorizontalFlipOut where
+    theme c = renderAnimationStyles c horizontalFlipOutAnimation
 
 data VerticalFlipIn = VerticalFlipIn
 verticalFlipIn = SomeInTheme VerticalFlipIn
@@ -808,8 +810,8 @@ verticalFlipInAnimation = simpleInAnimation "verticalFlipIn" $ do
     is (per 100) .> do
         opacity =: one
         trans (persp (pxs 2000) <<>> rotX(deg 0))
-instance Themeable VerticalFlipIn where
-    theme c _ = renderAnimationStyles c verticalFlipInAnimation
+instance Theme VerticalFlipIn where
+    theme c = renderAnimationStyles c verticalFlipInAnimation
 
 data VerticalFlipOut = VerticalFlipOut
 verticalFlipOut = SomeOutTheme VerticalFlipOut
@@ -820,8 +822,8 @@ verticalFlipOutAnimation = simpleOutAnimation "verticalFlipOut" $ do
     is (per 100) .> do
         opacity =: zero
         trans (persp (pxs 2000) <<>> rotX(deg 90))
-instance Themeable VerticalFlipOut where
-    theme c _ = renderAnimationStyles c verticalFlipOutAnimation
+instance Theme VerticalFlipOut where
+    theme c = renderAnimationStyles c verticalFlipOutAnimation
 
 data ScaleIn = ScaleIn
 scaleIn = SomeInTheme ScaleIn
@@ -832,8 +834,8 @@ scaleInAnimation = simpleInAnimation "scaleIn" $ do
     is (per 100) .> do
         opacity =: one
         trans $ Pure.Data.Styles.scale (int 1)
-instance Themeable ScaleIn where
-    theme c _ = renderAnimationStyles c scaleInAnimation
+instance Theme ScaleIn where
+    theme c = renderAnimationStyles c scaleInAnimation
 
 data ScaleOut = ScaleOut
 scaleOut = SomeOutTheme ScaleOut
@@ -844,8 +846,8 @@ scaleOutAnimation = simpleOutAnimation "scaleOut" $ do
     is (per 100) .> do
         opacity =: zero
         trans $ Pure.Data.Styles.scale (dec 0.9)
-instance Themeable ScaleOut where
-    theme c _ = renderAnimationStyles c scaleOutAnimation
+instance Theme ScaleOut where
+    theme c = renderAnimationStyles c scaleOutAnimation
 
 simpleFlyInAnimation name animation = InAnimationStyles
     { animationStyles = defaultAnimationStyles
@@ -878,8 +880,8 @@ flyInAnimation = simpleFlyInAnimation "flyIn" $ do
     f 60 (Just one) 1.03
     f 80 Nothing 0.97
     f 100 (Just one) 1
-instance Themeable FlyIn where
-    theme c _ = renderAnimationStyles c flyInAnimation
+instance Theme FlyIn where
+    theme c = renderAnimationStyles c flyInAnimation
 
 data FlyOut = FlyOut
 flyOut = SomeOutTheme FlyOut
@@ -892,8 +894,8 @@ flyOutAnimation = simpleFlyOutAnimation "flyOut" $ do
     f 50 (Just one) 1.1
     f 55 (Just one) 1.1
     f 100 (Just zero) 0.3
-instance Themeable FlyOut where
-    theme c _ = renderAnimationStyles c flyOutAnimation
+instance Theme FlyOut where
+    theme c = renderAnimationStyles c flyOutAnimation
 
 data FlyInUp = FlyInUp
 flyInUp = SomeInTheme FlyInUp
@@ -907,8 +909,8 @@ flyInUpAnimation = simpleFlyInAnimation "flyInUp" $ do
     f 75 Nothing (pxs 10)
     f 90 Nothing (neg (pxs 5))
     f 100 Nothing zero
-instance Themeable FlyInUp where
-    theme c _ = renderAnimationStyles c flyInUpAnimation
+instance Theme FlyInUp where
+    theme c = renderAnimationStyles c flyInUpAnimation
 
 data FlyOutUp = FlyOutUp
 flyOutUp = SomeOutTheme FlyOutUp
@@ -920,8 +922,8 @@ flyOutUpAnimation = simpleFlyOutAnimation "flyOutUp" $ do
     f 20 Nothing (pxs 10)
     f 40 (Just one) (neg (pxs 20))
     f 45 (Just one) (neg (pxs 20))
-instance Themeable FlyOutUp where
-    theme c _ = renderAnimationStyles c flyOutUpAnimation
+instance Theme FlyOutUp where
+    theme c = renderAnimationStyles c flyOutUpAnimation
 
 data FlyInDown = FlyInDown
 flyInDown = SomeInTheme FlyInDown
@@ -935,8 +937,8 @@ flyInDownAnimation = simpleFlyInAnimation "flyInDown" $ do
     f 75 Nothing (neg (pxs 10))
     f 90 Nothing (neg (pxs 5))
     is (per 100) .> trans "none"
-instance Themeable FlyInDown where
-    theme c _ = renderAnimationStyles c flyInDownAnimation
+instance Theme FlyInDown where
+    theme c = renderAnimationStyles c flyInDownAnimation
 
 data FlyOutDown = FlyOutDown
 flyOutDown = SomeOutTheme FlyOutDown
@@ -949,8 +951,8 @@ flyOutDownAnimation = simpleFlyOutAnimation "flyOutDown" $ do
     f 40 (Just one) (pxs 20)
     f 45 (Just one) (pxs 20)
     f 100 (Just zero) (neg (pxs 2000))
-instance Themeable FlyOutDown where
-    theme c _ = renderAnimationStyles c flyOutDownAnimation
+instance Theme FlyOutDown where
+    theme c = renderAnimationStyles c flyOutDownAnimation
 
 data FlyInLeft = FlyInLeft
 flyInLeft = SomeInTheme FlyInLeft
@@ -964,8 +966,8 @@ flyInLeftAnimation = simpleFlyInAnimation "flyInLeft" $ do
     f 75 Nothing (pxs 10)
     f 90 Nothing (neg (pxs 5))
     is (per 100) .> trans "none"
-instance Themeable FlyInLeft where
-    theme c _ = renderAnimationStyles c flyInLeftAnimation
+instance Theme FlyInLeft where
+    theme c = renderAnimationStyles c flyInLeftAnimation
 
 data FlyOutLeft = FlyOutLeft
 flyOutLeft = SomeOutTheme FlyOutLeft
@@ -976,8 +978,8 @@ flyOutLeftAnimation = simpleFlyOutAnimation "flyOutLeft" $ do
                 trans $ translate3d t3d zero zero
     f 20 (Just one) (neg (pxs 20))
     f 100 (Just zero) (pxs 2000)
-instance Themeable FlyOutLeft where
-    theme c _ = renderAnimationStyles c flyOutLeftAnimation
+instance Theme FlyOutLeft where
+    theme c = renderAnimationStyles c flyOutLeftAnimation
 
 data FlyInRight = FlyInRight
 flyInRight = SomeInTheme FlyInRight
@@ -991,8 +993,8 @@ flyInRightAnimation = simpleFlyInAnimation "flyInRight" $ do
     f 75 Nothing (neg (pxs 10))
     f 90 Nothing (pxs 5)
     is (per 100) .> trans "none"
-instance Themeable FlyInRight where
-    theme c _ = renderAnimationStyles c flyInRightAnimation
+instance Theme FlyInRight where
+    theme c = renderAnimationStyles c flyInRightAnimation
 
 data FlyOutRight = FlyOutRight
 flyOutRight = SomeOutTheme FlyOutRight
@@ -1003,8 +1005,8 @@ flyOutRightAnimation = simpleFlyOutAnimation "flyOutRight" $ do
                 trans $ translate3d t3d zero zero
     f 20 (Just one) (pxs 20)
     f 100 (Just zero) (neg (pxs 2000))
-instance Themeable FlyOutRight where
-    theme c _ = renderAnimationStyles c flyOutRightAnimation
+instance Theme FlyOutRight where
+    theme c = renderAnimationStyles c flyOutRightAnimation
 
 data SlideInDown = SlideInDown
 slideInDown = SomeInTheme SlideInDown
@@ -1021,8 +1023,8 @@ slideInDownAnimation = InAnimationStyles
               opacity =: one
               trans $ scaleY one
     }
-instance Themeable SlideInDown where
-    theme c _ = renderAnimationStyles c slideInDownAnimation
+instance Theme SlideInDown where
+    theme c = renderAnimationStyles c slideInDownAnimation
 
 data SlideInUp = SlideInUp
 slideInUp = SomeInTheme SlideInUp
@@ -1039,8 +1041,8 @@ slideInUpAnimation = InAnimationStyles
               opacity =: one
               trans $ scaleY one
     }
-instance Themeable SlideInUp where
-    theme c _ = renderAnimationStyles c slideInUpAnimation
+instance Theme SlideInUp where
+    theme c = renderAnimationStyles c slideInUpAnimation
 
 data SlideInLeft = SlideInLeft
 slideInLeft = SomeInTheme SlideInLeft
@@ -1057,8 +1059,8 @@ slideInLeftAnimation = InAnimationStyles
               opacity =: one
               trans $ scaleX one
     }
-instance Themeable SlideInLeft where
-    theme c _ = renderAnimationStyles c slideInLeftAnimation
+instance Theme SlideInLeft where
+    theme c = renderAnimationStyles c slideInLeftAnimation
 
 data SlideInRight = SlideInRight
 slideInRight = SomeInTheme SlideInRight
@@ -1075,8 +1077,8 @@ slideInRightAnimation = InAnimationStyles
               opacity =: one
               trans $ scaleX one
     }
-instance Themeable SlideInRight where
-    theme c _ = renderAnimationStyles c slideInRightAnimation
+instance Theme SlideInRight where
+    theme c = renderAnimationStyles c slideInRightAnimation
 
 data SlideOutDown = SlideOutDown
 slideOutDown = SomeInTheme SlideOutDown
@@ -1093,8 +1095,8 @@ slideOutDownAnimation = InAnimationStyles
               opacity =: zero
               trans $ scaleY zero
     }
-instance Themeable SlideOutDown where
-    theme c _ = renderAnimationStyles c slideOutDownAnimation
+instance Theme SlideOutDown where
+    theme c = renderAnimationStyles c slideOutDownAnimation
 
 data SlideOutUp = SlideOutUp
 slideOutUp = SomeInTheme SlideOutUp
@@ -1111,8 +1113,8 @@ slideOutUpAnimation = InAnimationStyles
               opacity =: zero
               trans $ scaleY zero
     }
-instance Themeable SlideOutUp where
-    theme c _ = renderAnimationStyles c slideOutUpAnimation
+instance Theme SlideOutUp where
+    theme c = renderAnimationStyles c slideOutUpAnimation
 
 data SlideOutLeft = SlideOutLeft
 slideOutLeft = SomeInTheme SlideOutLeft
@@ -1129,8 +1131,8 @@ slideOutLeftAnimation = InAnimationStyles
               opacity =: zero
               trans $ scaleX zero
     }
-instance Themeable SlideOutLeft where
-    theme c _ = renderAnimationStyles c slideOutLeftAnimation
+instance Theme SlideOutLeft where
+    theme c = renderAnimationStyles c slideOutLeftAnimation
 
 data SlideOutRight = SlideOutRight
 slideOutRight = SomeInTheme SlideOutRight
@@ -1147,8 +1149,8 @@ slideOutRightAnimation = InAnimationStyles
               opacity =: zero
               trans $ scaleX zero
     }
-instance Themeable SlideOutRight where
-    theme c _ = renderAnimationStyles c slideOutRightAnimation
+instance Theme SlideOutRight where
+    theme c = renderAnimationStyles c slideOutRightAnimation
 
 swingInAnimation name orig frames = InAnimationStyles
     { animationStyles = defaultAnimationStyles
@@ -1184,8 +1186,8 @@ swingInDownAnimation = swingInAnimation "swingInDown" (top <<>> center) $ swingF
     , (80,Left $ neg (deg 7.5),Nothing)
     , (100,Left $ deg 0,Nothing)
     ]
-instance Themeable SwingInDown where
-    theme c _ = renderAnimationStyles c swingInDownAnimation
+instance Theme SwingInDown where
+    theme c = renderAnimationStyles c swingInDownAnimation
 
 data SwingInUp = SwingInUp
 swingInUp = SomeInTheme SwingInUp
@@ -1196,8 +1198,8 @@ swingInUpAnimation = swingInAnimation "swingInUp" (bottom <<>> center) $ swingFr
     , (80,Left $ neg (deg 7.5),Nothing)
     , (100,Left $ deg 0,Nothing)
     ]
-instance Themeable SwingInUp where
-    theme c _ = renderAnimationStyles c swingInUpAnimation
+instance Theme SwingInUp where
+    theme c = renderAnimationStyles c swingInUpAnimation
 
 data SwingInLeft = SwingInLeft
 swingInLeft = SomeInTheme SwingInLeft
@@ -1208,8 +1210,8 @@ swingInLeftAnimation = swingInAnimation "swingInLeft" (center <<>> right) $ swin
     , (80,Right $ deg 7.5,Nothing)
     , (100,Right $ deg 0,Nothing)
     ]
-instance Themeable SwingInLeft where
-    theme c _ = renderAnimationStyles c swingInLeftAnimation
+instance Theme SwingInLeft where
+    theme c = renderAnimationStyles c swingInLeftAnimation
 
 data SwingInRight = SwingInRight
 swingInRight = SomeInTheme SwingInRight
@@ -1220,8 +1222,8 @@ swingInRightAnimation = swingInAnimation "swingInRight" (center <<>> left) $ swi
     , (80,Right $ deg 7.5,Nothing)
     , (100,Right $ deg 0,Nothing)
     ]
-instance Themeable SwingInRight where
-    theme c _ = renderAnimationStyles c swingInRightAnimation
+instance Theme SwingInRight where
+    theme c = renderAnimationStyles c swingInRightAnimation
 
 data SwingOutDown = SwingOutDown
 swingOutDown = SomeOutTheme SwingOutDown
@@ -1232,8 +1234,8 @@ swingOutDownAnimation = swingOutAnimation "swingOutDown" (top <<>> center) $ swi
     , (80,Left $ neg (deg 30),Just one)
     , (100,Left $ deg 90,Just zero)
     ]
-instance Themeable SwingOutDown where
-    theme c _ = renderAnimationStyles c swingOutDownAnimation
+instance Theme SwingOutDown where
+    theme c = renderAnimationStyles c swingOutDownAnimation
 
 data SwingOutUp = SwingOutUp
 swingOutUp = SomeOutTheme SwingOutUp
@@ -1244,8 +1246,8 @@ swingOutUpAnimation = swingOutAnimation "swingOutUp" (bottom <<>> center) $ swin
     , (80,Left $ neg (deg 30),Just one)
     , (100,Left $ deg 90,Just zero)
     ]
-instance Themeable SwingOutUp where
-    theme c _ = renderAnimationStyles c swingOutUpAnimation
+instance Theme SwingOutUp where
+    theme c = renderAnimationStyles c swingOutUpAnimation
 
 data SwingOutLeft = SwingOutLeft
 swingOutLeft = SomeOutTheme SwingOutLeft
@@ -1256,8 +1258,8 @@ swingOutLeftAnimation = swingOutAnimation "swingOutLeft" (center <<>> right) $ s
     , (80,Right $ deg 30,Just one)
     , (100,Right $ neg (deg 90),Just zero)
     ]
-instance Themeable SwingOutLeft where
-    theme c _ = renderAnimationStyles c swingOutLeftAnimation
+instance Theme SwingOutLeft where
+    theme c = renderAnimationStyles c swingOutLeftAnimation
 
 data SwingOutRight = SwingOutRight
 swingOutRight = SomeOutTheme SwingOutRight
@@ -1268,8 +1270,8 @@ swingOutRightAnimation = swingOutAnimation "swingOutRight" (center <<>> left) $ 
     , (80,Right $ deg 30,Just one)
     , (100,Right $ neg (deg 90),Just zero)
     ]
-instance Themeable SwingOutRight where
-    theme c _ = renderAnimationStyles c swingOutRightAnimation
+instance Theme SwingOutRight where
+    theme c = renderAnimationStyles c swingOutRightAnimation
 
 data ZoomIn = ZoomIn
 zoomIn = SomeInTheme ZoomIn
@@ -1280,8 +1282,8 @@ zoomInAnimation = simpleInAnimation "zoomIn" $ do
     is (per 100) .> do
         opacity =: one
         trans $ scale one
-instance Themeable ZoomIn where
-    theme c _ = renderAnimationStyles c zoomInAnimation
+instance Theme ZoomIn where
+    theme c = renderAnimationStyles c zoomInAnimation
 
 data ZoomOut = ZoomOut
 zoomOut = SomeOutTheme ZoomOut
@@ -1292,16 +1294,16 @@ zoomOutAnimation = simpleOutAnimation "zoomOut" $ do
     is (per 100) .> do
         opacity =: one
         trans $ scale zero
-instance Themeable ZoomOut where
-    theme c _ = renderAnimationStyles c zoomOutAnimation
+instance Theme ZoomOut where
+    theme c = renderAnimationStyles c zoomOutAnimation
 
 data Flash = Flash
 flash = SomeInTheme Flash
 flashAnimation = simpleStaticAnimation "flash" 750 $ do
     is (per 0 <&>> per 50 <&>> per 100) .> opacity =: one
     is (per 25 <&>> per 75) .> opacity =: zero
-instance Themeable Flash where
-    theme c _ = renderAnimationStyles c flashAnimation
+instance Theme Flash where
+    theme c = renderAnimationStyles c flashAnimation
 
 data Shake = Shake
 shake = SomeInTheme Shake
@@ -1314,8 +1316,8 @@ shakeAnimation = simpleStaticAnimation "shake" 750 $ do
 
     is (per 20 <&>> per 40 <&>> per 60 <&>> per 80) .> 
       trans (translateX (pxs 10))
-instance Themeable Shake where
-    theme c _ = renderAnimationStyles c shakeAnimation
+instance Theme Shake where
+    theme c = renderAnimationStyles c shakeAnimation
 
 data Bounce = Bounce
 bounce = SomeInTheme Bounce
@@ -1326,8 +1328,8 @@ bounceAnimation = simpleStaticAnimation "bounce" 750 $ do
       trans (translateY (neg (pxs 30)))
     is (per 60) .>
       trans (translateY (neg (pxs 15)))
-instance Themeable Bounce where
-    theme c _ = renderAnimationStyles c bounceAnimation
+instance Theme Bounce where
+    theme c = renderAnimationStyles c bounceAnimation
 
 data Tada = Tada
 tada = SomeInTheme Tada
@@ -1342,8 +1344,8 @@ tadaAnimation = simpleStaticAnimation "tada" 750 $ do
       trans (scale(dec 1.1) <<>> rotate(neg (deg 3)))
     is (per 100) .>
       trans (scale one <<>> rotate zero)
-instance Themeable Tada where
-    theme c _ = renderAnimationStyles "tada" tadaAnimation
+instance Theme Tada where
+    theme c = renderAnimationStyles "tada" tadaAnimation
 
 data Pulse = Pulse
 pulse = SomeInTheme Pulse
@@ -1357,16 +1359,16 @@ pulseAnimation = simpleStaticAnimation "pulse" 750 $ do
     is (per 100) .> do
         trans (scale one)
         opacity =: one
-instance Themeable Pulse where
-    theme c _ = renderAnimationStyles c pulseAnimation
+instance Theme Pulse where
+    theme c = renderAnimationStyles c pulseAnimation
 
 data Jiggle = Jiggle
 jiggle = SomeInTheme Jiggle
 jiggleAnimation = simpleStaticAnimation "jiggle" 750 $ do
     let fs = [ (0,1,1,1), (30,1.25,0.75,1), (40,0.75,1.25,1), (50,1.15,0.85,1), (65,0.95,1.05,1), (75,1.05,0.95,1), (100,1,1,1) ]
     for_ fs $ \(p,x,y,z) -> is (per p) .> trans ("scale3d(" <> dec x <&>> dec y <&>> dec z <> ")")
-instance Themeable Jiggle where
-    theme c _ = renderAnimationStyles c jiggleAnimation
+instance Theme Jiggle where
+    theme c = renderAnimationStyles c jiggleAnimation
 
 data Glow = Glow
 glow = SomeInTheme Glow
@@ -1384,5 +1386,5 @@ glowAnimation = StaticAnimationStyles
         is (per 100) .>
           backgroundColor =: "#FCFCFD"
     }
-instance Themeable Glow where
-    theme c _ = renderAnimationStyles c glowAnimation
+instance Theme Glow where
+    theme c = renderAnimationStyles c glowAnimation
