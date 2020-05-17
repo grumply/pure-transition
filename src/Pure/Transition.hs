@@ -2,24 +2,24 @@
     OverloadedStrings, MultiWayIf, ExistentialQuantification, 
     DuplicateRecordFields, RecordWildCards, MultiParamTypeClasses, 
     DeriveGeneric, DeriveAnyClass, FlexibleContexts, TypeApplications, 
-    ScopedTypeVariables #-}
+    ScopedTypeVariables, PostfixOperators #-}
 module Pure.Transition where
 
 -- from pure
-import Pure hiding (Transition,Left,Right,ZoomIn,ZoomOut,animation,visible)
+import Pure hiding (Transition,Left,Right,ZoomIn,ZoomOut,not,(#))
 
 -- from pure-cond
 import Pure.Data.Cond
 
 -- from pure-theme
-import Pure.Theme hiding (visible)
+import Pure.Theme hiding (not,(#))
 import qualified Pure.Theme as CSS
 
 -- from pure-prop
 import Pure.Data.Prop
 
 -- from pure-styles
-import Pure.Data.Styles hiding (visible,animation)
+import Pure.Data.Styles hiding (not,(#))
 
 import Control.Arrow ((&&&))
 import Control.Concurrent
@@ -34,8 +34,9 @@ import Data.Function as Tools ((&))
 
 import Pure.Transition.Utils
 
-import Debug.Trace
-import Unsafe.Coerce
+import Prelude hiding (or)
+
+-- A port of pure-semantic-ui's Transition with themeing
 
 data As = As_
 pattern As :: HasProp As a => Prop As a -> a -> a
@@ -118,8 +119,8 @@ data Transition = Transition_
     , children :: [View]
     , inAnimation :: SomeInTheme
     , outAnimation :: SomeOutTheme
-    , duration :: AnimationDuration
-    , visible :: Bool
+    , duration_ :: AnimationDuration
+    , visible_ :: Bool
     , mountOnShow :: Bool
     , onComplete :: TransitionStatus -> IO ()
     , onHide :: TransitionStatus -> IO ()
@@ -132,8 +133,8 @@ data Transition = Transition_
 instance Default Transition where
     def = (G.to gdef)
         { as = \fs cs -> Div & Features fs & Children cs
-        , duration = Uniform 500
-        , visible = True
+        , duration_ = Uniform 500
+        , visible_ = True
         , mountOnShow = True
         }
 
@@ -150,7 +151,7 @@ data TransitionState = TS
 
 instance Pure Transition where
     view =
-        LibraryComponentIO $ \self ->
+        Component $ \self ->
             let
 
                 setSafeState f = do
@@ -173,7 +174,7 @@ instance Pure Transition where
                         , for_ upcoming $ \s -> do
                             onStart s
                             tid <- forkIO $ do
-                                threadDelay (calculateTransitionDuration s duration * 1000)
+                                threadDelay (calculateTransitionDuration s duration_ * 1000)
                                 handleComplete
                             writeIORef transitionTimeout (Just tid)
                         )
@@ -212,10 +213,10 @@ instance Pure Transition where
                 computeInitialStatuses = do
                     Transition_ {..} <- ask self
                     return $
-                        if | visible && transitionOnMount -> (Exited   ,Just Entering)
-                           | visible                      -> (Entered  ,Nothing)
-                           | mountOnShow || unmountOnHide -> (Unmounted,Nothing)
-                           | otherwise                    -> (Exited   ,Nothing)
+                        if | visible_ && transitionOnMount -> (Exited   ,Just Entering)
+                           | visible_                      -> (Entered  ,Nothing)
+                           | mountOnShow || unmountOnHide  -> (Unmounted,Nothing)
+                           | otherwise                     -> (Exited   ,Nothing)
 
                 computeNextStatus = do
                     TS {..} <- get self
@@ -246,7 +247,7 @@ instance Pure Transition where
                     , receive = \newprops oldstate -> do
                         oldprops <- ask self
                         TS {..}  <- get self
-                        let (current,upcoming) = computeStatuses (visible newprops) status
+                        let (current,upcoming) = computeStatuses (visible_ newprops) status
                         writeIORef next upcoming
                         let newStatus = fromMaybe status current
                         return TS
@@ -263,25 +264,23 @@ instance Pure Transition where
 
                     , render = \Transition_ {..} TS {..} ->
                           let
-                              animationClasses cs =
-                                  cs ++
-                                    [ animating # "animating"
-                                    , case status of
-                                        Entering -> "in"
-                                        Exiting  -> "out"
-                                        Exited   -> "hidden"
-                                        _        -> def
-                                    , (status /= Exited) # "visible"
-                                    , "transition"
-                                    ]
+                              animationClasses =
+                                [ animating # "animating"
+                                , case status of
+                                    Entering -> "in"
+                                    Exiting  -> out
+                                    Exited   -> hidden
+                                    _        -> def
+                                , (status /= Exited) # visible
+                                , transition
+                                ]
 
-                              animationStyles styles =
-                                  let ad =
-                                          case status of
-                                              Entering -> ("animation-duration",ms(calculateTransitionDuration status duration))
-                                              Exiting  -> ("animation-duration",ms(calculateTransitionDuration status duration))
-                                              _        -> def
-                                  in styles <> [ ad ]
+                              animationStyles =
+                                [ case status of
+                                    Entering -> (animation-duration,(calculateTransitionDuration status duration_) <#> ms)
+                                    Exiting  -> (animation-duration,(calculateTransitionDuration status duration_) <#> ms)
+                                    _        -> def
+                                ]
 
                           in
                               (status /= Unmounted) #
@@ -289,8 +288,8 @@ instance Pure Transition where
                                       (SomeInTheme it,SomeOutTheme ot) ->
                                           as ( themed it
                                              $ themed ot
-                                             $ Classes (animationClasses []) 
-                                             $ Styles (animationStyles [])
+                                             $ Classes animationClasses
+                                             $ Styles animationStyles
                                              $ features
                                              ) 
                                              children
@@ -321,13 +320,13 @@ instance HasProp OutAnimation Transition where
 
 instance HasProp AnimationDuration Transition where
     type Prop AnimationDuration Transition = AnimationDuration
-    getProp _ = duration
-    setProp _ d t = t { duration = d }
+    getProp _ = duration_
+    setProp _ d t = t { duration_ = d }
 
 instance HasProp Visible Transition where
     type Prop Visible Transition = Bool
-    getProp _ = visible
-    setProp _ v t = t { visible = v }
+    getProp _ = visible_
+    setProp _ v t = t { visible_ = v }
 
 instance HasProp MountOnShow Transition where
     type Prop MountOnShow Transition = Bool
@@ -368,7 +367,7 @@ data Group = Group_
     { as :: Features -> [(Int,View)] -> View
     , features :: Features
     , children :: [(Int,View)]
-    , duration :: AnimationDuration
+    , duration_ :: AnimationDuration
     , inAnimation :: SomeInTheme
     , outAnimation :: SomeOutTheme
     } deriving (Generic)
@@ -376,7 +375,7 @@ data Group = Group_
 instance Default Group where
     def = (G.to gdef :: Group)
         { as = \fs cs -> (Keyed Div) & Features fs & KeyedChildren cs
-        , duration = Uniform 500
+        , duration_ = Uniform 500
         }
 
 pattern Group :: Group -> Group
@@ -388,25 +387,25 @@ data GroupState = TGS
 
 instance Pure Group where
     view =
-        LibraryComponentIO $ \self ->
+        Component $ \self ->
             let
                 handleOnHide key _ =
                     modify_ self $ \_ TGS {..} -> TGS { buffer = Prelude.filter ((/= key) . fst) buffer, .. }
 
                 wrapChild inAnim outAnim dur vis tom (key,child) =
                     (key,View $ Transition def
-                        { duration = dur
+                        { duration_ = dur
                         , inAnimation = inAnim
                         , outAnimation = outAnim
                         , transitionOnMount = tom
-                        , visible = vis
+                        , visible_ = vis
                         , onHide = handleOnHide key
                         , children = [ child ]
                         }
                     )
 
                 hide :: View -> View
-                hide (View Transition_ {..}) = View Transition_ { visible = False, .. }
+                hide (View Transition_ {..}) = View Transition_ { visible_ = False, .. }
 
                 fromTransition (Just (View t@Transition_ {})) f = Just (f t)
                 fromTransition _ _ = Nothing
@@ -415,22 +414,22 @@ instance Pure Group where
                 { construct = do
                     tg@Group_ {..} <- ask self
                     return TGS
-                        { buffer = fmap (wrapChild inAnimation outAnimation duration True False) children
+                        { buffer = fmap (wrapChild inAnimation outAnimation duration_ True False) children
                         }
 
-                , receive = \Group_ { duration = dur, children = cs, .. } TGS {..} -> return TGS
+                , receive = \Group_ { duration_ = dur, children = cs, .. } TGS {..} -> return TGS
                     { buffer = flip fmap (mergeMappings buffer cs) $ \(k,c) ->
                         let prevChild = lookup k buffer
                             hasPrev   = isJust prevChild
                             hasNext   = isJust (lookup k cs)
-                            leaving   = fromMaybe False (fromTransition prevChild (not . visible))
+                            leaving   = fromMaybe False (fromTransition prevChild (not . visible_))
                             entering  = hasNext && (not hasPrev || leaving)
                             exiting   = not hasNext && hasPrev && not leaving
 
                         in if | entering  -> wrapChild inAnimation outAnimation dur True True (k,c)
                               | exiting   -> (k,hide (fromJust prevChild))
                               | otherwise -> fromJust $ fromTransition prevChild $ \Transition_ {..} ->
-                                                 wrapChild inAnimation outAnimation dur visible transitionOnMount (k,c)
+                                                 wrapChild inAnimation outAnimation dur visible_ transitionOnMount (k,c)
 
                     , ..
                     }
@@ -463,10 +462,10 @@ instance HasProp OutAnimation Group where
 
 instance HasProp AnimationDuration Group where
     type Prop AnimationDuration Group = AnimationDuration
-    getProp _ = duration
-    setProp _ d tg = tg { duration = d }
+    getProp _ = duration_
+    setProp _ d tg = tg { duration_ = d }
 
--- Transitions from semantic-ui: https://github.com/Semantic-Org/Semantic-UI-CSS/blob/master/components/transition.css
+-- Transitions from semantic-ui: https://github.com/Semantic-Org/Semantic-UI-CSS/blob/master/comp1nts/transition.css
 
 data SomeInTheme = forall t. Theme t => SomeInTheme t
 instance Default SomeInTheme where def = Pure.Transition.fadeIn
@@ -500,23 +499,33 @@ instance Theme NoAnimation where
 
 simpleInAnimation name frames = InAnimationStyles
     { animationStyles = defaultAnimationStyles
-    , onTransition = void $ apply $ animName name
-    , onAnimation = void $ keyframes name frames
+    , onTransition = 
+        void $ apply $ 
+            animation-name =: name
+    , onAnimation = 
+        void $ 
+            atKeyframes name frames
     }
 
 simpleOutAnimation name frames = OutAnimationStyles
     { animationStyles = defaultAnimationStyles
-    , onTransition = void $ apply $ animName name
-    , onAnimation = void $ keyframes name frames
+    , onTransition =
+        void $ apply $ 
+            animation-name =: name
+    , onAnimation = 
+        void $ 
+            atKeyframes name frames
     }
 
 simpleStaticAnimation name dur frames = StaticAnimationStyles
     { animationStyles = defaultAnimationStyles
     , onTransition = do
         void $ apply $ do
-            animDur dur
-            animName name 
-    , onAnimation = void $ keyframes name frames
+            animation-duration =: dur
+            animation-name =: name 
+    , onAnimation = 
+        void $ 
+            atKeyframes name frames
     }
 
 renderAnimationStyles c InAnimationStyles {..} = do
@@ -537,48 +546,64 @@ renderAnimationStyles c StaticAnimationStyles {..} = do
 
 defaultAnimationStyles = void $ do
     apply $ do
-        animIter one
-        animDur 300
-        "-webkit-animation-timing-function" =: ease
-        "animation-timing-function"        =: ease
-        "-webkit-animation-fill-mode"       =: both
-        "animation-fill-mode"              =: both
+        animation-iteration-count        =: 1
+        animation-duration               =: 300
+        webkit-animation-timing-function =: ease
+        animation-timing-function        =: ease
+        webkit-animation-fill-mode       =: both
+        animation-fill-mode              =: both
+
     is ".animating" .> do
-        "-webkit-backface-visibility" =: hidden
-        "backface-visibility"        =: hidden
-        important $ visibility        =: "visible"
+        backface-visibility        =: hidden
+        important $ visibility     =: visible
+
     is ".loading" .> do
         position =: absolute
-        top      =: pxs (-99999)
-        left     =: pxs (-99999)
+        top      =: (-99999)px
+        left     =: (-99999)px
+
     is ".hidden" .> do
         visibility =: hidden
         display    =: none
+
     is ".visible" .> do
         important $ display    =: block
-        important $ visibility =: "visible"
+        important $ visibility =: visible
+
     is ".disabled" .> do
-        "-webkit-animation-play-state" =: "paused"
-        "animation-play-state"        =: "paused"
-    is ".looping" .> animIter infinite
+        animation-play-state =: paused
+
+    is ".looping" .> 
+        animation-iteration-count =: infinite
 
 data BrowseIn = BrowseIn
 browseIn = SomeInTheme BrowseIn
 browseInAnimation = InAnimationStyles 
     { animationStyles = defaultAnimationStyles 
+
     , onTransition = void $ apply $ do
-        animDur 500
-        animName "browseIn" 
-    , onAnimation = void $ keyframes "browseIn" $ do
-        let f p s z mo = 
-                is (per p) .> do
-                    trans $ Pure.Data.Styles.scale(s) <<>> translateZ(pxs 0)
-                    zIndex =: z
-                    maybe (return ()) (\o -> void $ opacity =: o) mo
-        f 0   (dec 0.8)  (neg one)  Nothing
-        f 10  (dec 0.8)  (neg one) (Just "0.7")
-        f 80  (dec 1.05) "999" (Just "1")
-        f 100 (dec 1.05) "999" Nothing
+        animation-duration =: 500
+        animation-name =: "browseIn" 
+
+    , onAnimation = void $ atKeyframes "browseIn" $ do
+        -- translate3d forces GPU-acceleration in these transforms
+        is (0%) .> do
+            transform =: scale(0.8) <<>> translate3d(0,0,0)
+            z-index   =: (-1)
+
+        is (10%) .> do
+            transform =: scale(0.8) <<>> translate3d(0,0,0)
+            z-index   =: (-1)
+
+        is (80%) .> do
+            transform =: scale(1.05) <<>> translate3d(0,0,0)
+            z-index   =: 999
+            opacity   =: 0.7
+
+        is (100%) .> do
+            transform =: scale(1.05) <<>> translate3d(0,0,0)
+            z-index   =: 999
+            opacity   =: 1
     }
 instance Theme BrowseIn where
     theme c = renderAnimationStyles c browseInAnimation
@@ -587,19 +612,27 @@ data BrowseOutLeft = BrowseOutLeft
 browseOutLeft = SomeOutTheme BrowseOutLeft
 browseOutLeftAnimation = OutAnimationStyles 
     { animationStyles = defaultAnimationStyles
+
     , onTransition = void $ apply $ do
-        animDur 500
-        animName "browseOutLeft"
-    , onAnimation = void $ keyframes "browseOutLeft" $ do
-        let f p z tx ry rx tz mo =
-                is (per p) .> do
-                    zIndex =: z
-                    trans $ translateX(tx) <<>> rotY ry <<>> rotX rx <<>> maybe "" translateZ tz
-                    maybe (return ()) (\o -> void $ opacity =: o) mo
-        f 0  (int 999) (per 0) (deg 0) (deg 0) Nothing Nothing
-        f 50 (neg one) (neg (per 105)) (deg 35) (deg 10) (Just (neg (pxs 10))) Nothing
-        is (per 80) .> opacity =: one
-        f 100 (neg one) (per 0) (deg 0) (deg 0) (Just (neg (pxs 10))) (Just zero)
+        animation-duration =: 500
+        animation-name =: "browseOutLeft"
+
+    , onAnimation = void $ atKeyframes "browseOutLeft" $ do
+        is (0%) .> do
+            z-index   =: 999
+            transform =: translateX(0%) <<>> rotateY(0deg) <<>> rotateX(0deg)
+
+        is (50%) .> do
+            z-index   =: (-1)
+            transform =: translateX((-105)%) <<>> rotateY(35deg) <<>> rotateX(10deg) <<>> translateZ((-10)px)
+
+        is (80%) .> do
+            opacity =: 1
+
+        is (100%) .> do
+            z-index   =: (-1)
+            transform =: translateX(0%) <<>> rotateY(0deg) <<>> rotateX(0deg) <<>> translateZ((-10)px)
+            opacity   =: 0
     }
 instance Theme BrowseOutLeft where
     theme c = renderAnimationStyles c browseOutLeftAnimation
@@ -608,19 +641,27 @@ data BrowseOutRight = BrowseOutRight
 browseOutRight = SomeOutTheme BrowseOutRight
 browseOutRightAnimation = OutAnimationStyles
     { animationStyles = defaultAnimationStyles
+
     , onTransition = void $ apply $ do
-        animDur 500
-        animName "browseOutRight" 
-    , onAnimation = void $ keyframes "browseOutRight" $ do
-        let f p z tx ry rx tz mo =
-                is (per p) .> do
-                    zIndex =: z
-                    trans $ translateX(tx) <<>> rotY ry <<>> rotX rx <<>> maybe "" translateZ tz
-                    maybe (return ()) (\o -> void $ opacity =: o) mo
-        f 0 (int 999) (per 0) (deg 0) (deg 0) Nothing Nothing
-        f 50 one (per 105) (deg 35) (deg 35) (Just (neg (pxs 10))) Nothing
-        is (per 80) .> opacity =: one
-        f 100 one (per 0) (deg 0) (deg 0) (Just (neg (pxs 10))) (Just zero)
+        animation-duration =: 500
+        animation-name =: "browseOutRight" 
+
+    , onAnimation = void $ atKeyframes "browseOutRight" $ do
+        is (0%) .> do
+            z-index   =: 999
+            transform =: translateX(0%) <<>> rotateY(0deg) <<>> rotateX(0deg)
+
+        is (50%) .> do
+            z-index   =: 1
+            transform =: translateX((-105)%) <<>> rotateY(35deg) <<>> rotateX(10deg) <<>> translateZ((-10)px)
+
+        is (80%) .> do
+            opacity =: 1
+
+        is (100%) .> do
+            z-index   =: 1
+            transform =: translateX(0%) <<>> rotateY(0deg) <<>> rotateX(0deg) <<>> translateZ((-10)px)
+            opacity   =: 0
     }
 instance Theme BrowseOutRight where
     theme c = renderAnimationStyles c browseOutRightAnimation
@@ -629,18 +670,21 @@ data DropIn = DropIn
 dropIn = SomeInTheme DropIn
 dropInAnimation = InAnimationStyles
     { animationStyles = defaultAnimationStyles
+
     , onTransition = void $ apply $ do 
-          transOrigin (top <<>> center)
-          animDur 400
-          animTiming (0.34,1.61,0.7,1)
-          animName "dropIn"
-    , onAnimation = void $ keyframes "dropIn" $ do
-          is (per 0) .> do
-              opacity =: zero
-              trans $ Pure.Data.Styles.scale zero
-          is (per 100) .> do
-              opacity =: one
-              trans $ Pure.Data.Styles.scale one
+          transform-origin          =* [top,center]
+          animation-duration        =: 400
+          animation-timing-function =: cubez(0.34,1.61,0.7,1)
+          animation-name            =: "dropIn"
+
+    , onAnimation = void $ atKeyframes "dropIn" $ do
+          is (0%) .> do
+              opacity   =: 0
+              transform =: scale(0)
+
+          is (100%) .> do
+              opacity   =: 1
+              transform =: scale(1)
     }
 instance Theme DropIn where
     theme c = renderAnimationStyles c dropInAnimation
@@ -649,18 +693,21 @@ data DropOut = DropOut
 dropOut = SomeOutTheme DropOut
 dropOutAnimation = OutAnimationStyles
     { animationStyles = defaultAnimationStyles 
+
     , onTransition = void $ apply $ do
-          transOrigin (top <<>> center)
-          animDur 400
-          animTiming (0.34,1.61,0.7,1)
-          animName "dropOut"
-    , onAnimation = void $ keyframes "dropOut" $ do
-          is (per 0)    .> do
-              opacity =: one
-              trans $ Pure.Data.Styles.scale one
-          is (per 100) .> do
-              opacity =: zero
-              trans $ Pure.Data.Styles.scale zero
+          transform-origin          =* [top,center]
+          animation-duration        =: 400
+          animation-timing-function =: cubez(0.34,1.61,0.7,1)
+          animation-name            =: "dropOut"
+
+    , onAnimation = void $ atKeyframes "dropOut" $ do
+          is (0%) .> do
+              opacity   =: 1
+              transform =: scale(1)
+
+          is (100%) .> do
+              opacity   =: 0
+              transform =: scale(0)
     }
 instance Theme DropOut where
     theme c = renderAnimationStyles c dropOutAnimation
@@ -668,343 +715,405 @@ instance Theme DropOut where
 data FadeIn = FadeIn
 fadeIn = SomeInTheme FadeIn
 fadeInAnimation = simpleInAnimation "fadeIn" $ do
-    is (per 0)   .> opacity =: zero
-    is (per 100) .> opacity =: one
+    is (0%) .> 
+        opacity =: 0
+    is (100%) .> 
+        opacity =: 1
 instance Theme FadeIn where
     theme c = renderAnimationStyles c fadeInAnimation
 
 data FadeOut = FadeOut
 fadeOut = SomeOutTheme FadeOut
 fadeOutAnimation = simpleOutAnimation "fadeOut" $ do
-    is (per 0)   .> opacity =: one
-    is (per 100) .> opacity =: zero
+    is (0%) .> 
+        opacity =: 1
+    is (100%) .> 
+        opacity =: 0
 instance Theme FadeOut where
     theme c = renderAnimationStyles c fadeOutAnimation
 
 data FadeInUp = FadeInUp
 fadeInUp = SomeInTheme FadeInUp
 fadeInUpAnimation = simpleInAnimation "fadeInUp" $ do
-    is (per 0) .> do
-        opacity =: zero
-        trans (translateY(per 10))
-    is (per 100) .> do
-        opacity =: one
-        trans (translateY(per 0))
+    is (0%) .> do
+        opacity =: 0
+        transform =: translateY(10%)
+    is (100%) .> do
+        opacity =: 1
+        transform =: translateY(0%)
 instance Theme FadeInUp where
     theme c = renderAnimationStyles c fadeInUpAnimation
 
 data FadeOutUp = FadeOutUp
 fadeOutUp = SomeOutTheme FadeOutUp
 fadeOutUpAnimation = simpleOutAnimation "fadeOutUp" $ do
-    is (per 0) .> do
-        opacity =: one
-        trans (translateY(per 0))
-    is (per 100) .> do
-        opacity =: zero
-        trans (translateY(per 5))
+    is (0%) .> do
+        opacity =: 1
+        transform =: translateY(0%)
+    is (100%) .> do
+        opacity =: 0
+        transform =: translateY(5%)
 instance Theme FadeOutUp where
     theme c = renderAnimationStyles c fadeOutUpAnimation
 
 data FadeInDown = FadeInDown
 fadeInDown = SomeInTheme FadeInDown
 fadeInDownAnimation = simpleInAnimation "fadeInDown" $ do
-    is (per 0) .> do
-        opacity =: zero
-        trans (translateY(neg (per 10)))
-    is (per 100) .> do
-        opacity =: one
-        trans (translateY(per 0))
+    is (0%) .> do
+        opacity =: 0
+        transform =: translateY((-10)%)
+    is (100%) .> do
+        opacity =: 1
+        transform =: translateY(0%)
 instance Theme FadeInDown where
     theme c = renderAnimationStyles c fadeInDownAnimation
 
 data FadeOutDown = FadeOutDown
 fadeOutDown = SomeOutTheme FadeOutDown
 fadeOutDownAnimation = simpleOutAnimation "fadeOutDown" $ do
-    is (per 0) .> do
-        opacity =: one
-        trans (translateY(per 0))
-    is (per 100) .> do
-        opacity =: zero
-        trans (translateY(neg (per 5)))
+    is (0%) .> do
+        opacity =: 1
+        transform =: translateY(0%)
+    is (100%) .> do
+        opacity =: 0
+        transform =: translateY((-5)%)
 instance Theme FadeOutDown where
     theme c = renderAnimationStyles c fadeOutDownAnimation
 
 data FadeInLeft = FadeInLeft
 fadeInLeft = SomeInTheme FadeInLeft
 fadeInLeftAnimation = simpleInAnimation "fadeInLeft" $ do
-    is (per 0) .> do
-        opacity =: zero
-        trans (translateX(per 10))
-    is (per 100) .> do
-        opacity =: one
-        trans (translateX(per 0))
+    is (0%) .> do
+        opacity =: 0
+        transform =: translateX(10%)
+    is (100%) .> do
+        opacity =: 1
+        transform =: translateX(0%)
 instance Theme FadeInLeft where
     theme c = renderAnimationStyles c fadeInLeftAnimation
 
 data FadeOutLeft = FadeOutLeft
 fadeOutLeft = SomeOutTheme FadeOutLeft
 fadeOutLeftAnimation = simpleOutAnimation "fadeOutLeft" $ do
-    is (per 0) .> do
-        opacity =: one
-        trans (translateX(per 0))
-    is (per 100) .> do
-        opacity =: zero
-        trans (translateX(per 5))
+    is (0%) .> do
+        opacity =: 1
+        transform =: translateX(0%)
+    is (100%) .> do
+        opacity =: 0
+        transform =: translateX(5%)
 instance Theme FadeOutLeft where
     theme c = renderAnimationStyles c fadeOutLeftAnimation
 
 data FadeInRight = FadeInRight
 fadeInRight = SomeInTheme FadeInRight
 fadeInRightAnimation = simpleInAnimation "fadeInRight" $ do
-    is (per 0) .> do
-        opacity =: zero
-        trans (translateX(neg (per 10)))
-    is (per 100) .> do
-        opacity =: one
-        trans (translateX(per 0))
+    is (0%) .> do
+        opacity =: 0
+        transform =: translateX((-10)%)
+    is (100%) .> do
+        opacity =: 1
+        transform =: translateX(0%)
 instance Theme FadeInRight where
     theme c = renderAnimationStyles c fadeInRightAnimation
 
 data FadeOutRight = FadeOutRight
 fadeOutRight = SomeOutTheme FadeOutRight
 fadeOutRightAnimation = simpleOutAnimation "fadeOutRight" $ do
-    is (per 0) .> do
-        opacity =: one
-        trans (translateX(per 0))
-    is (per 100) .> do
-        opacity =: zero
-        trans (translateX(neg (per 5)))
+    is (0%) .> do
+        opacity =: 1
+        transform =: translateX(0%)
+    is (100%) .> do
+        opacity =: 0
+        transform =: translateX((-5)%)
 instance Theme FadeOutRight where
     theme c = renderAnimationStyles c fadeOutRightAnimation
 
 data HorizontalFlipIn = HorizontalFlipIn
 horizontalFlipIn = SomeInTheme HorizontalFlipIn
 horizontalFlipInAnimation = simpleInAnimation "horizontalFlipIn" $ do
-    is (per 0) .> do
-        opacity =: zero
-        trans (persp (pxs 2000) <<>> rotY(neg (deg 90)))
-    is (per 100) .> do
-        opacity =: one
-        trans (persp (pxs 2000) <<>> rotY(deg 0))
+    is (0%) .> do
+        opacity =: 0
+        transform =: persp(2000px) <<>> rotY((-90)deg)
+    is (100%) .> do
+        opacity =: 1
+        transform =: persp(2000px) <<>> rotY(0deg)
 instance Theme HorizontalFlipIn where
     theme c = renderAnimationStyles c horizontalFlipInAnimation
 
 data HorizontalFlipOut = HorizontalFlipOut
 horizontalFlipOut = SomeOutTheme HorizontalFlipOut
 horizontalFlipOutAnimation = simpleOutAnimation "horizontalFlipOut" $ do
-    is (per 0) .> do
-        opacity =: one
-        trans (persp (pxs 2000) <<>> rotY(deg 0))
-    is (per 100) .> do
-        opacity =: zero
-        trans (persp (pxs 2000) <<>> rotY(deg 90))
+    is (0%) .> do
+        opacity =: 1
+        transform =: persp(2000px) <<>> rotY(0deg)
+    is (100%) .> do
+        opacity =: 0
+        transform =: persp(2000px) <<>> rotY(90deg)
 instance Theme HorizontalFlipOut where
     theme c = renderAnimationStyles c horizontalFlipOutAnimation
 
 data VerticalFlipIn = VerticalFlipIn
 verticalFlipIn = SomeInTheme VerticalFlipIn
 verticalFlipInAnimation = simpleInAnimation "verticalFlipIn" $ do
-    is (per 0) .> do
-        opacity =: zero
-        trans (persp (pxs 2000) <<>> rotX(neg (deg 90)))
-    is (per 100) .> do
-        opacity =: one
-        trans (persp (pxs 2000) <<>> rotX(deg 0))
+    is (0%) .> do
+        opacity =: 0
+        transform =: persp(2000px) <<>> rotX(-(90)deg)
+    is (100%) .> do
+        opacity =: 1
+        transform =: persp(2000px) <<>> rotX(0deg)
 instance Theme VerticalFlipIn where
     theme c = renderAnimationStyles c verticalFlipInAnimation
 
 data VerticalFlipOut = VerticalFlipOut
 verticalFlipOut = SomeOutTheme VerticalFlipOut
 verticalFlipOutAnimation = simpleOutAnimation "verticalFlipOut" $ do
-    is (per 0) .> do
-        opacity =: one
-        trans (persp (pxs 2000) <<>> rotX(deg 0))
-    is (per 100) .> do
-        opacity =: zero
-        trans (persp (pxs 2000) <<>> rotX(deg 90))
+    is (0%) .> do
+        opacity =: 1
+        transform =: persp(2000px) <<>> rotX(0deg)
+    is (100%) .> do
+        opacity =: 0
+        transform =: persp(2000px) <<>> rotX(90deg)
 instance Theme VerticalFlipOut where
     theme c = renderAnimationStyles c verticalFlipOutAnimation
 
 data ScaleIn = ScaleIn
 scaleIn = SomeInTheme ScaleIn
 scaleInAnimation = simpleInAnimation "scaleIn" $ do
-    is (per 0) .> do
-        opacity =: zero
-        trans $ Pure.Data.Styles.scale (dec 0.8)
-    is (per 100) .> do
-        opacity =: one
-        trans $ Pure.Data.Styles.scale (int 1)
+    is (0%) .> do
+        opacity =: 0
+        transform =: scale(0.8)
+    is (100%) .> do
+        opacity =: 1
+        transform =: scale(1)
 instance Theme ScaleIn where
     theme c = renderAnimationStyles c scaleInAnimation
 
 data ScaleOut = ScaleOut
 scaleOut = SomeOutTheme ScaleOut
 scaleOutAnimation = simpleOutAnimation "scaleOut" $ do
-    is (per 0) .> do
-        opacity =: one
-        trans $ Pure.Data.Styles.scale (int 1)
-    is (per 100) .> do
-        opacity =: zero
-        trans $ Pure.Data.Styles.scale (dec 0.9)
+    is (0%) .> do
+        opacity =: 1
+        transform =: scale(1)
+    is (100%) .> do
+        opacity =: 0
+        transform =: scale(0.9)
 instance Theme ScaleOut where
     theme c = renderAnimationStyles c scaleOutAnimation
 
-simpleFlyInAnimation name animation = InAnimationStyles
+simpleFlyInAnimation name anim = InAnimationStyles
     { animationStyles = defaultAnimationStyles
     , onTransition = void $ apply $ do
-        animDur 600
-        transTiming (0.215,0.16,0.355,1)
-        animName name
-    , onAnimation = void $ keyframes name animation
+        animation-duration         =: 600
+        transition-timing-function =: cubez(0.215,0.16,0.355,1)
+        animation-name             =: name
+    , onAnimation = void $ atKeyframes name anim
     }
 
-simpleFlyOutAnimation name animation = OutAnimationStyles
+simpleFlyOutAnimation name anim = OutAnimationStyles
     { animationStyles = defaultAnimationStyles
     , onTransition = void $ apply $ do
-        animDur 600
-        transTiming (0.215,0.16,0.355,1)
-        animName name
-    , onAnimation = void $ keyframes name animation
+        animation-duration         =: 600
+        transition-timing-function =: cubez(0.215,0.16,0.355,1)
+        animation-name             =: name
+    , onAnimation = void $ atKeyframes name anim
     }
 
 data FlyIn = FlyIn
 flyIn = SomeInTheme FlyIn
 flyInAnimation = simpleFlyInAnimation "flyIn" $ do
-    let f p mo s3d = 
-            is (per p) .> do
-                maybe (return ()) (void . (opacity =:)) mo
-                trans $ scale3 s3d
-    f 0 (Just zero) 0.3
-    f 20 Nothing 1.1
-    f 40 Nothing 0.9
-    f 60 (Just one) 1.03
-    f 80 Nothing 0.97
-    f 100 (Just one) 1
+    is (0%) .> do
+        opacity =: 0
+        transform =: scale3d(0.3,0.3,0.3)
+
+    is (20%) .>
+        transform =: scale3d(1.1,1.1,1.1)
+
+    is (40%) .>
+        transform =: scale3d(0.9,0.9,0.9)
+
+    is (60%) .> do 
+        opacity =: 1
+        transform =: scale3d(1.03,1.03,1.03)
+
+    is (80%) .>
+        transform =: scale3d(0.97,0.97,0.97)
+
+    is (100%) .> do
+        opacity =: 1
+        transform =: scale3d(1,1,1)
+
 instance Theme FlyIn where
     theme c = renderAnimationStyles c flyInAnimation
 
 data FlyOut = FlyOut
 flyOut = SomeOutTheme FlyOut
 flyOutAnimation = simpleFlyOutAnimation "flyOut" $ do
-    let f p mo s3d = 
-            is (per p) .> do
-                maybe (return ()) (void . (opacity =:)) mo
-                trans $ scale3 s3d
-    f 20 Nothing 0.9
-    f 50 (Just one) 1.1
-    f 55 (Just one) 1.1
-    f 100 (Just zero) 0.3
+    is (20%) .> do
+        transform =: scale3d(0.9,0.9,0.9)
+
+    is (50%) . or is (55%) .> do
+        opacity =: 1
+        transform =: scale3d(1.1,1.1,1.1)
+
+    is (100%) .> do
+        opacity =: 0
+        transform =: scale3d(0.3,0.3,0.3)
+
 instance Theme FlyOut where
     theme c = renderAnimationStyles c flyOutAnimation
 
 data FlyInUp = FlyInUp
 flyInUp = SomeInTheme FlyInUp
 flyInUpAnimation = simpleFlyInAnimation "flyInUp" $ do
-    let f p mo t3d = 
-            is (per p) .> do
-                maybe (return ()) (void . (opacity =:)) mo
-                trans $ translate3d zero t3d zero
-    f 0 (Just zero) (pxs 1500)
-    f 60 (Just one) (neg (pxs 20))
-    f 75 Nothing (pxs 10)
-    f 90 Nothing (neg (pxs 5))
-    f 100 Nothing zero
+    is (0%) .> do
+        opacity =: 0
+        transform =: translate3d(0,1500px,0)
+
+    is (60%) .> do
+        opacity =: 1
+        transform =: translate3d(0,(-20)px,0)
+
+    is (75%) .>
+        transform =: translate3d(0,10px,0)
+
+    is (90%) .>
+        transform =: translate3d(0,(-5)px,0)
+
+    is (100%) .>
+        transform =: translate3d(0,0,0)
+
+
 instance Theme FlyInUp where
     theme c = renderAnimationStyles c flyInUpAnimation
 
 data FlyOutUp = FlyOutUp
 flyOutUp = SomeOutTheme FlyOutUp
 flyOutUpAnimation = simpleFlyOutAnimation "flyOutUp" $ do
-    let f p mo t3d = 
-            is (per p) .> do
-                maybe (return ()) (void . (opacity =:)) mo
-                trans $ translate3d zero t3d zero
-    f 20 Nothing (pxs 10)
-    f 40 (Just one) (neg (pxs 20))
-    f 45 (Just one) (neg (pxs 20))
+    is (20%) .>
+        transform =: translate3d(0,10px,0)
+
+    is (40%) . or is (45%) .> do
+        opacity   =: 1
+        transform =: translate3d(0,(-20)px,0);
+
+    is (100%) .> do
+        opacity   =: 0
+        transform =: translate3d(0,2000px,0);
+
 instance Theme FlyOutUp where
     theme c = renderAnimationStyles c flyOutUpAnimation
 
 data FlyInDown = FlyInDown
 flyInDown = SomeInTheme FlyInDown
 flyInDownAnimation = simpleFlyInAnimation "flyInDown" $ do
-    let f p mo t3d =
-            is (per p) .> do
-                maybe (return ()) (void . (opacity =:)) mo
-                trans $ translate3d zero t3d zero
-    f 0 (Just zero) (neg (pxs 1500))
-    f 60 (Just one) (pxs 25)
-    f 75 Nothing (neg (pxs 10))
-    f 90 Nothing (neg (pxs 5))
-    is (per 100) .> trans "none"
+    is (0%) .> do
+        opacity =: 0
+        transform =: translate3d(0,(-1500)px,0)
+
+    is (60%) .> do
+        opacity =: 1
+        transform =: translate3d(0,25px,0)
+
+    is (75%) .>
+        transform =: translate3d(0,(-10)px,0)
+
+    is (90%) .>
+        transform =: translate3d(0,5px,0)
+
+    is (100%) .>
+        transform =: none
+
 instance Theme FlyInDown where
     theme c = renderAnimationStyles c flyInDownAnimation
 
 data FlyOutDown = FlyOutDown
 flyOutDown = SomeOutTheme FlyOutDown
 flyOutDownAnimation = simpleFlyOutAnimation "flyOutDown" $ do
-    let f p mo t3d =
-            is (per p) .> do
-                maybe (return ()) (void . (opacity =:)) mo
-                trans $ translate3d zero t3d zero
-    f 20 Nothing (neg (pxs 10))
-    f 40 (Just one) (pxs 20)
-    f 45 (Just one) (pxs 20)
-    f 100 (Just zero) (neg (pxs 2000))
+    is (20%) .>
+        transform =: translate3d(0,(-10)px,0)
+
+    is (40%) . is (45%) .> do
+        opacity =: 1
+        transform =: translate3d(0,20px,0)
+
+    is (100%) .> do
+        opacity =: 0
+        transform =: translate3d(0,(-2000)px,0)
+
 instance Theme FlyOutDown where
     theme c = renderAnimationStyles c flyOutDownAnimation
 
 data FlyInLeft = FlyInLeft
 flyInLeft = SomeInTheme FlyInLeft
 flyInLeftAnimation = simpleFlyInAnimation "flyInLeft" $ do
-    let f p mo t3d =
-            is (per p) .> do
-                maybe (return ()) (void . (opacity =:)) mo
-                trans $ translate3d t3d zero zero
-    f 0 (Just zero) (pxs 1500)
-    f 60 (Just one) (neg (pxs 25))
-    f 75 Nothing (pxs 10)
-    f 90 Nothing (neg (pxs 5))
-    is (per 100) .> trans "none"
+    is (0%) .> do
+        opacity =: 0
+        transform =: translate3d(1500px,0,0)
+
+    is (60%) .> do
+        opacity =: 1
+        transform =: translate3d((-25)px,0,0)
+
+    is (75%) .>
+        transform =: translate3d(10px,0,0)
+
+    is (90%) .>
+        transform =: translate3d((-5)px,0,0)
+
+    is (100%) .>
+        transform =: none
+
 instance Theme FlyInLeft where
     theme c = renderAnimationStyles c flyInLeftAnimation
 
 data FlyOutLeft = FlyOutLeft
 flyOutLeft = SomeOutTheme FlyOutLeft
 flyOutLeftAnimation = simpleFlyOutAnimation "flyOutLeft" $ do
-    let f p mo t3d =
-            is (per p) .> do
-                maybe (return ()) (void . (opacity =:)) mo
-                trans $ translate3d t3d zero zero
-    f 20 (Just one) (neg (pxs 20))
-    f 100 (Just zero) (pxs 2000)
+    is (20%) .> do
+        opacity =: 1
+        transform =: translate3d((-20)px,0,0)
+
+    is (100%) .> do
+        opacity =: 0
+        transform =: translate3d(2000px,0,0)
+
 instance Theme FlyOutLeft where
     theme c = renderAnimationStyles c flyOutLeftAnimation
 
 data FlyInRight = FlyInRight
 flyInRight = SomeInTheme FlyInRight
 flyInRightAnimation = simpleFlyInAnimation "flyInRight" $ do
-    let f p mo t3d =
-            is (per p) .> do
-                maybe (return ()) (void . (opacity =:)) mo
-                trans $ translate3d t3d zero zero
-    f 0 (Just zero) (neg (pxs 1500))
-    f 60 (Just one) (pxs 25)
-    f 75 Nothing (neg (pxs 10))
-    f 90 Nothing (pxs 5)
-    is (per 100) .> trans "none"
+    is (0%) .> do
+        opacity =: 0
+        transform =: translate3d((-1500)px,0,0)
+    
+    is (60%) .> do
+        opacity =: 1
+        transform =: translate3d(25px,0,0)
+    
+    is (75%) .>
+        transform =: translate3d((-10)px,0,0)
+
+    is (90%) .>
+        transform =: translate3d(5px,0,0)
+
+    is (100%) .>
+        transform =: none
+
 instance Theme FlyInRight where
     theme c = renderAnimationStyles c flyInRightAnimation
 
 data FlyOutRight = FlyOutRight
 flyOutRight = SomeOutTheme FlyOutRight
 flyOutRightAnimation = simpleFlyOutAnimation "flyOutRight" $ do
-    let f p mo t3d =
-            is (per p) .> do
-                maybe (return ()) (void . (opacity =:)) mo
-                trans $ translate3d t3d zero zero
-    f 20 (Just one) (pxs 20)
-    f 100 (Just zero) (neg (pxs 2000))
+    is (20%) .> do
+        opacity =: 1
+        transform =: translate3d(20px,0,0)
+
+    is (100%) .> do
+        opacity =: 0
+        transform =: translate3d((-2000)px,0,0)
+
 instance Theme FlyOutRight where
     theme c = renderAnimationStyles c flyOutRightAnimation
 
@@ -1012,16 +1121,19 @@ data SlideInDown = SlideInDown
 slideInDown = SomeInTheme SlideInDown
 slideInDownAnimation = InAnimationStyles 
     { animationStyles = defaultAnimationStyles
+
     , onTransition = void $ apply $ do 
-          transOrigin (top <<>> center)
-          animName "slideInDown"
-    , onAnimation = void $ keyframes "slideInDown" $ do
-          is (per 0) .> do
-              opacity =: zero
-              trans $ scaleY zero
-          is (per 100) .> do
-              opacity =: one
-              trans $ scaleY one
+          transform-origin =* [top,center]
+          animation-name =: "slideInDown"
+
+    , onAnimation = void $ atKeyframes "slideInDown" $ do
+          is (0%) .> do
+              opacity   =: 0
+              transform =: scaleY(0)
+
+          is (100%) .> do
+              opacity   =: 1
+              transform =: scaleY(1)
     }
 instance Theme SlideInDown where
     theme c = renderAnimationStyles c slideInDownAnimation
@@ -1030,16 +1142,19 @@ data SlideInUp = SlideInUp
 slideInUp = SomeInTheme SlideInUp
 slideInUpAnimation = InAnimationStyles
     { animationStyles = defaultAnimationStyles
+
     , onTransition = void $ apply $ do 
-          transOrigin (bottom <<>> center)
-          animName "slideInUp"
-    , onAnimation = void $ keyframes "slideInUp" $ do
-          is (per 0) .> do
-              opacity =: zero
-              trans $ scaleY zero
-          is (per 100) .> do
-              opacity =: one
-              trans $ scaleY one
+          transform-origin =* [bottom,center]
+          animation-name =: "slideInUp"
+
+    , onAnimation = void $ atKeyframes "slideInUp" $ do
+          is (0%) .> do
+              opacity   =: 0
+              transform =: scaleY(0)
+
+          is (100%) .> do
+              opacity   =: 1
+              transform =: scaleY(1)
     }
 instance Theme SlideInUp where
     theme c = renderAnimationStyles c slideInUpAnimation
@@ -1048,16 +1163,19 @@ data SlideInLeft = SlideInLeft
 slideInLeft = SomeInTheme SlideInLeft
 slideInLeftAnimation = InAnimationStyles 
     { animationStyles = defaultAnimationStyles
+
     , onTransition = void $ apply $ do
-            transOrigin (center <<>> right)
-            animName "slideInLeft"
-    , onAnimation = void $ keyframes "slideInLeft" $ do
-          is (per 0) .> do
-              opacity =: zero
-              trans $ scaleX zero
-          is (per 100) .> do
-              opacity =: one
-              trans $ scaleX one
+        transform-origin =* [center,right]
+        animation-name =: "slideInLeft"
+
+    , onAnimation = void $ atKeyframes "slideInLeft" $ do
+        is (0%) .> do
+            opacity   =: 0
+            transform =: scaleX(0)
+
+        is (100%) .> do
+            opacity   =: 1
+            transform =: scaleX(1)
     }
 instance Theme SlideInLeft where
     theme c = renderAnimationStyles c slideInLeftAnimation
@@ -1066,16 +1184,19 @@ data SlideInRight = SlideInRight
 slideInRight = SomeInTheme SlideInRight
 slideInRightAnimation = InAnimationStyles 
     { animationStyles = defaultAnimationStyles
+
     , onTransition = void $ apply $ do
-            transOrigin (center <<>> left)
-            animName "slideInRight"
-    , onAnimation = void $ keyframes "slideInRight" $ do
-          is (per 0) .> do
-              opacity =: zero
-              trans $ scaleX zero
-          is (per 100) .> do
-              opacity =: one
-              trans $ scaleX one
+        transform-origin =* [center,left]
+        animation-name =: "slideInRight"
+
+    , onAnimation = void $ atKeyframes "slideInRight" $ do
+        is (0%) .> do
+            opacity   =: 0
+            transform =: scaleX(0)
+
+        is (100%) .> do
+            opacity   =: 1
+            transform =: scaleX(1)
     }
 instance Theme SlideInRight where
     theme c = renderAnimationStyles c slideInRightAnimation
@@ -1084,16 +1205,19 @@ data SlideOutDown = SlideOutDown
 slideOutDown = SomeInTheme SlideOutDown
 slideOutDownAnimation = InAnimationStyles 
     { animationStyles = defaultAnimationStyles
+
     , onTransition = void $ apply $ do 
-          transOrigin (top <<>> center)
-          animName "slideOutDown"
-    , onAnimation = void $ keyframes "slideOutDown" $ do
-          is (per 0) .> do
-              opacity =: one
-              trans $ scaleY one
-          is (per 100) .> do
-              opacity =: zero
-              trans $ scaleY zero
+        transform-origin =: (top <<>> center)
+        animation-name =: "slideOutDown"
+
+    , onAnimation = void $ atKeyframes "slideOutDown" $ do
+        is (0%) .> do
+            opacity =: 1
+            transform =: scaleY(1)
+
+        is (100%) .> do
+            opacity =: 0
+            transform =: scaleY(0)
     }
 instance Theme SlideOutDown where
     theme c = renderAnimationStyles c slideOutDownAnimation
@@ -1102,16 +1226,19 @@ data SlideOutUp = SlideOutUp
 slideOutUp = SomeInTheme SlideOutUp
 slideOutUpAnimation = InAnimationStyles
     { animationStyles = defaultAnimationStyles
+
     , onTransition = void $ apply $ do 
-          transOrigin (bottom <<>> center)
-          animName "slideOutUp"
-    , onAnimation = void $ keyframes "slideOutUp" $ do
-          is (per 0) .> do
-              opacity =: one
-              trans $ scaleY one
-          is (per 100) .> do
-              opacity =: zero
-              trans $ scaleY zero
+        transform-origin =: (bottom <<>> center)
+        animation-name =: "slideOutUp"
+
+    , onAnimation = void $ atKeyframes "slideOutUp" $ do
+        is (0%) .> do
+            opacity   =: 1
+            transform =: scaleY(1)
+
+        is (100%) .> do
+            opacity   =: 0
+            transform =: scaleY(0)
     }
 instance Theme SlideOutUp where
     theme c = renderAnimationStyles c slideOutUpAnimation
@@ -1121,15 +1248,16 @@ slideOutLeft = SomeInTheme SlideOutLeft
 slideOutLeftAnimation = InAnimationStyles 
     { animationStyles = defaultAnimationStyles
     , onTransition = void $ apply $ do
-            transOrigin (center <<>> right)
-            animName "slideOutLeft"
-    , onAnimation = void $ keyframes "slideOutLeft" $ do
-          is (per 0) .> do
-              opacity =: one
-              trans $ scaleX one
-          is (per 100) .> do
-              opacity =: zero
-              trans $ scaleX zero
+            transform-origin =* [center,right]
+            animation-name   =: "slideOutLeft"
+    , onAnimation = void $ atKeyframes "slideOutLeft" $ do
+          is (0%) .> do
+              opacity   =: 1
+              transform =: scaleX(1)
+
+          is (100%) .> do
+              opacity =: 0
+              transform =: scaleX(0)
     }
 instance Theme SlideOutLeft where
     theme c = renderAnimationStyles c slideOutLeftAnimation
@@ -1138,16 +1266,19 @@ data SlideOutRight = SlideOutRight
 slideOutRight = SomeInTheme SlideOutRight
 slideOutRightAnimation = InAnimationStyles 
     { animationStyles = defaultAnimationStyles
+
     , onTransition = void $ apply $ do
-            transOrigin (center <<>> left)
-            animName "slideOutRight"
-    , onAnimation = void $ keyframes "slideOutRight" $ do
-          is (per 0) .> do
-              opacity =: one
-              trans $ scaleX one
-          is (per 100) .> do
-              opacity =: zero
-              trans $ scaleX zero
+        transform-origin =* [center,left]
+        animation-name   =: "slideOutRight"
+
+    , onAnimation = void $ atKeyframes "slideOutRight" $ do
+        is (0%) .> do
+            opacity   =: 1
+            transform =: scaleX(1)
+
+        is (100%) .> do
+            opacity   =: 0
+            transform =: scaleX(0)
     }
 instance Theme SlideOutRight where
     theme c = renderAnimationStyles c slideOutRightAnimation
@@ -1155,210 +1286,311 @@ instance Theme SlideOutRight where
 swingInAnimation name orig frames = InAnimationStyles
     { animationStyles = defaultAnimationStyles
     , onTransition = void $ apply $ do
-        animDur 600
-        transOrigin orig
-        animName name
-    , onAnimation = void $ keyframes name frames
+        animation-duration =: 600
+        transform-origin   =: orig
+        animation-name     =: name
+    , onAnimation = void $ atKeyframes name frames
     }
 
 swingOutAnimation name orig frames = OutAnimationStyles
     { animationStyles = defaultAnimationStyles
     , onTransition = void $ apply $ do
-        animDur 600
-        transOrigin orig
-        animName name
-    , onAnimation = void $ keyframes name frames
+        animation-duration =: 600
+        transform-origin   =: orig
+        animation-name     =: name
+    , onAnimation = void $ atKeyframes name frames
     }
 
 swingFrames ((p,exy,mo):fs) = do
-    is (per p) .> do
-        trans $ persp(pxs 1000) <<>> either rotX rotY exy
+    is (percent p) .> do
+        transform =: persp(1000px) <<>> either rotX rotY exy
         maybe (return ()) (void . (opacity =:)) mo
     swingFrames fs
 swingFrames [] = return ()
 
 data SwingInDown = SwingInDown
 swingInDown = SomeInTheme SwingInDown
-swingInDownAnimation = swingInAnimation "swingInDown" (top <<>> center) $ swingFrames
-    [ (0,Left $ deg 90,Just zero)
-    , (40,Left $ neg (deg 30),Just one)
-    , (60,Left $ deg 15,Nothing)
-    , (80,Left $ neg (deg 7.5),Nothing)
-    , (100,Left $ deg 0,Nothing)
-    ]
+swingInDownAnimation = swingInAnimation "swingInDown" (top <<>> center) $ do
+    is (0%) .> do
+        opacity  =: 0
+        transform =: persp(1000px) <<>> rotateX(90deg)
+
+    is (40%) .> do
+        opacity =: 1
+        transform =: persp(1000px) <<>> rotateX((-30)deg)
+
+    is (60%) .>
+        transform =: persp(1000px) <<>> rotateX(15deg)
+
+    is (80%) .>
+        transform =: persp(1000px) <<>> rotateX((-7.5)deg)
+
+    is (100%) .>
+        transform =: persp(1000px) <<>> rotateX(0deg)
+
 instance Theme SwingInDown where
     theme c = renderAnimationStyles c swingInDownAnimation
 
 data SwingInUp = SwingInUp
 swingInUp = SomeInTheme SwingInUp
-swingInUpAnimation = swingInAnimation "swingInUp" (bottom <<>> center) $ swingFrames
-    [ (0,Left $ deg 90,Just zero)
-    , (40,Left $ neg (deg 30),Just one)
-    , (60,Left $ deg 15,Nothing)
-    , (80,Left $ neg (deg 7.5),Nothing)
-    , (100,Left $ deg 0,Nothing)
-    ]
+swingInUpAnimation = swingInAnimation "swingInUp" (bottom <<>> center) $ do
+    is (0%) .> do
+        opacity  =: 0
+        transform =: persp(1000px) <<>> rotateX((-90)deg)
+
+    is (40%) .> do
+        opacity =: 1
+        transform =: persp(1000px) <<>> rotateX(30deg)
+
+    is (60%) .>
+        transform =: persp(1000px) <<>> rotateX((-15)deg)
+
+    is (80%) .>
+        transform =: persp(1000px) <<>> rotateX((7.5)deg)
+
+    is (100%) .>
+        transform =: persp(1000px) <<>> rotateX(0deg)
+
 instance Theme SwingInUp where
     theme c = renderAnimationStyles c swingInUpAnimation
 
 data SwingInLeft = SwingInLeft
 swingInLeft = SomeInTheme SwingInLeft
-swingInLeftAnimation = swingInAnimation "swingInLeft" (center <<>> right) $ swingFrames
-    [ (0,Right $ neg (deg 90),Just zero)
-    , (40,Right $ deg 30,Just one)
-    , (60,Right $ neg (deg 17.5),Nothing)
-    , (80,Right $ deg 7.5,Nothing)
-    , (100,Right $ deg 0,Nothing)
-    ]
+swingInLeftAnimation = swingInAnimation "swingInLeft" (center <<>> right) $ do
+    is (0%) .> do
+        opacity  =: 0
+        transform =: persp(1000px) <<>> rotateY((-90)deg)
+
+    is (40%) .> do
+        opacity =: 1
+        transform =: persp(1000px) <<>> rotateY(30deg)
+
+    is (60%) .>
+        transform =: persp(1000px) <<>> rotateY((-15)deg)
+
+    is (80%) .>
+        transform =: persp(1000px) <<>> rotateY((7.5)deg)
+
+    is (100%) .>
+        transform =: persp(1000px) <<>> rotateY(0deg)
+
 instance Theme SwingInLeft where
     theme c = renderAnimationStyles c swingInLeftAnimation
 
 data SwingInRight = SwingInRight
 swingInRight = SomeInTheme SwingInRight
-swingInRightAnimation = swingInAnimation "swingInRight" (center <<>> left) $ swingFrames
-    [ (0,Right $ neg (deg 90),Just zero)
-    , (40,Right $ deg 30,Just one)
-    , (60,Right $ neg (deg 17.5),Nothing)
-    , (80,Right $ deg 7.5,Nothing)
-    , (100,Right $ deg 0,Nothing)
-    ]
+swingInRightAnimation = swingInAnimation "swingInRight" (center <<>> left) $ do
+    is (0%) .> do
+        opacity  =: 0
+        transform =: persp(1000px) <<>> rotateY((-90)deg)
+
+    is (40%) .> do
+        opacity =: 1
+        transform =: persp(1000px) <<>> rotateY(30deg)
+
+    is (60%) .>
+        transform =: persp(1000px) <<>> rotateY((-15)deg)
+
+    is (80%) .>
+        transform =: persp(1000px) <<>> rotateY(7.5deg)
+
+    is (100%) .>
+        transform =: persp(1000px) <<>> rotateY(0deg)
+
+
 instance Theme SwingInRight where
     theme c = renderAnimationStyles c swingInRightAnimation
 
 data SwingOutDown = SwingOutDown
 swingOutDown = SomeOutTheme SwingOutDown
-swingOutDownAnimation = swingOutAnimation "swingOutDown" (top <<>> center) $ swingFrames
-    [ (0,Left $ deg 0,Nothing)
-    , (40,Left $ neg (deg 7.5),Nothing)
-    , (60,Left $ deg 17.5,Nothing)
-    , (80,Left $ neg (deg 30),Just one)
-    , (100,Left $ deg 90,Just zero)
-    ]
+swingOutDownAnimation = swingOutAnimation "swingOutDown" (top <<>> center) $ do
+    is (0%) .>
+        transform =: persp(1000px) <<>> rotateX(0deg)
+    
+    is (40%) .>
+        transform =: persp(1000px) <<>> rotateX(7.5deg)
+
+    is (60%) .>
+        transform =: persp(1000px) <<>> rotateX(15deg)
+
+    is (80%) .> do
+        opacity   =: 1
+        transform =: persp(1000px) <<>> rotateX((-30)deg)
+
+    is (100%) .> do
+        opacity   =: 0
+        transform =: persp(1000px) <<>> rotateX(90deg)
+
 instance Theme SwingOutDown where
     theme c = renderAnimationStyles c swingOutDownAnimation
 
 data SwingOutUp = SwingOutUp
 swingOutUp = SomeOutTheme SwingOutUp
-swingOutUpAnimation = swingOutAnimation "swingOutUp" (bottom <<>> center) $ swingFrames
-    [ (0,Left $ deg 0,Nothing)
-    , (40,Left $ neg (deg 7.5),Nothing)
-    , (60,Left $ deg 17.5,Nothing)
-    , (80,Left $ neg (deg 30),Just one)
-    , (100,Left $ deg 90,Just zero)
-    ]
+swingOutUpAnimation = swingOutAnimation "swingOutUp" (bottom <<>> center) $ do
+    is (0%) .>
+        transform =: persp(1000px) <<>> rotateX(0deg)
+    
+    is (40%) .>
+        transform =: persp(1000px) <<>> rotateX((-7.5)deg)
+
+    is (60%) .>
+        transform =: persp(1000px) <<>> rotateX(15deg)
+
+    is (80%) .> do
+        opacity   =: 1
+        transform =: persp(1000px) <<>> rotateX((-30)deg)
+
+    is (100%) .> do
+        opacity   =: 0
+        transform =: persp(1000px) <<>> rotateX(90deg)
+
 instance Theme SwingOutUp where
     theme c = renderAnimationStyles c swingOutUpAnimation
 
 data SwingOutLeft = SwingOutLeft
 swingOutLeft = SomeOutTheme SwingOutLeft
-swingOutLeftAnimation = swingOutAnimation "swingOutLeft" (center <<>> right) $ swingFrames
-    [ (0,Right $ deg 0,Nothing)
-    , (40,Right $ deg 7.5,Nothing)
-    , (60,Right $ neg (deg 10),Nothing)
-    , (80,Right $ deg 30,Just one)
-    , (100,Right $ neg (deg 90),Just zero)
-    ]
+swingOutLeftAnimation = swingOutAnimation "swingOutLeft" (center <<>> right) $ do
+    is (0%) .>
+        transform =: persp(1000px) <<>> rotateY(0deg)
+    is (40%) .>
+        transform =: persp(1000px) <<>> rotateY(7.5deg)
+    is (60%) .>
+        transform =: persp(1000px) <<>> rotateY((-15)deg)
+    is (80%) .> do
+        opacity   =: 1
+        transform =: persp(1000px) <<>> rotateY(30deg)
+    is (100%) .> do
+        opacity   =: 0
+        transform =: persp(1000px) <<>> rotateY((-90)deg)
+
 instance Theme SwingOutLeft where
     theme c = renderAnimationStyles c swingOutLeftAnimation
 
 data SwingOutRight = SwingOutRight
 swingOutRight = SomeOutTheme SwingOutRight
-swingOutRightAnimation = swingOutAnimation "swingOutRight" (center <<>> left) $ swingFrames
-    [ (0,Right $ deg 0,Nothing)
-    , (40,Right $ deg 7.5,Nothing)
-    , (60,Right $ neg (deg 10),Nothing)
-    , (80,Right $ deg 30,Just one)
-    , (100,Right $ neg (deg 90),Just zero)
-    ]
+swingOutRightAnimation = swingOutAnimation "swingOutRight" (center <<>> left) $ do
+    is (0%) .>
+        transform =: persp(1000px) <<>> rotateY(0deg)
+    is (40%) .>
+        transform =: persp(1000px) <<>> rotateY(7.5deg)
+    is (60%) .>
+        transform =: persp(1000px) <<>> rotateY((-15)deg)
+    is (80%) .> do
+        opacity   =: 1
+        transform =: persp(1000px) <<>> rotateY(30deg)
+    is (100%) .> do
+        opacity   =: 0
+        transform =: persp(1000px) <<>> rotateY((-90)deg)
+
 instance Theme SwingOutRight where
     theme c = renderAnimationStyles c swingOutRightAnimation
 
 data ZoomIn = ZoomIn
 zoomIn = SomeInTheme ZoomIn
 zoomInAnimation = simpleInAnimation "zoomIn" $ do
-    is (per 0) .> do
-        opacity =: one
-        trans $ scale zero
-    is (per 100) .> do
-        opacity =: one
-        trans $ scale one
+    is (0%) .> do
+        opacity   =: 1
+        transform =: scale(0)
+
+    is (100%) .> do
+        opacity   =: 1
+        transform =: scale(1)
+
 instance Theme ZoomIn where
     theme c = renderAnimationStyles c zoomInAnimation
 
 data ZoomOut = ZoomOut
 zoomOut = SomeOutTheme ZoomOut
 zoomOutAnimation = simpleOutAnimation "zoomOut" $ do
-    is (per 0) .> do
-        opacity =: one
-        trans $ scale one
-    is (per 100) .> do
-        opacity =: one
-        trans $ scale zero
+    is (0%) .> do
+        opacity   =: 1
+        transform =: scale(1)
+
+    is (100%) .> do
+        opacity =: 1
+        transform =: scale(0)
+
 instance Theme ZoomOut where
     theme c = renderAnimationStyles c zoomOutAnimation
 
 data Flash = Flash
 flash = SomeInTheme Flash
 flashAnimation = simpleStaticAnimation "flash" 750 $ do
-    is (per 0 <&>> per 50 <&>> per 100) .> opacity =: one
-    is (per 25 <&>> per 75) .> opacity =: zero
+    is (0%) . or is (50%) . or is (100%) .> 
+        opacity =: 1
+
+    is (25%) . or is (75%) .> 
+        opacity =: 0
+
 instance Theme Flash where
     theme c = renderAnimationStyles c flashAnimation
 
 data Shake = Shake
 shake = SomeInTheme Shake
 shakeAnimation = simpleStaticAnimation "shake" 750 $ do
-    is (per 0 <&>> per 100) .> 
-      trans (translateX zero)
+    is (0%) . or is (100%) .> 
+      transform =: translateX(0)
 
-    is (per 10 <&>> per 30 <&>> per 50 <&>> per 70 <&>> per 90) .> 
-      trans (translateX (neg (pxs 10)))
+    is (10%) . or is (30%) . or is (50%) . or is (70%) . or is (90%) .> 
+      transform =: translateX((-10)px)
 
-    is (per 20 <&>> per 40 <&>> per 60 <&>> per 80) .> 
-      trans (translateX (pxs 10))
+    is (20%) . or is (40%) . or is (60%) . or is (80%) .> 
+      transform =: translateX(10px)
+
 instance Theme Shake where
     theme c = renderAnimationStyles c shakeAnimation
 
 data Bounce = Bounce
 bounce = SomeInTheme Bounce
 bounceAnimation = simpleStaticAnimation "bounce" 750 $ do
-    is (per 0 <&>> per 20 <&>> per 50 <&>> per 80 <&>> per 100) .>
-      trans (translateY zero)
-    is (per 40) .>
-      trans (translateY (neg (pxs 30)))
-    is (per 60) .>
-      trans (translateY (neg (pxs 15)))
+    is (0%) . or is (20%) . or is (50%) . or is (80%) . or is (100%) .>
+      transform =: translateY(0)
+
+    is (40%) .>
+      transform =: translateY((-30)px)
+
+    is (60%) .>
+      transform =: translateY(15px)
+
 instance Theme Bounce where
     theme c = renderAnimationStyles c bounceAnimation
 
 data Tada = Tada
 tada = SomeInTheme Tada
 tadaAnimation = simpleStaticAnimation "tada" 750 $ do
-    is (per 0) .>
-      trans (scale one)
-    is (per 10 <&>> per 20) .>
-      trans (scale(dec 0.9) <<>> rotate(neg (deg 3)))
-    is (per 30 <&>> per 50 <&>> per 70 <&>> per 90) .>
-      trans (scale(dec 1.1) <<>> rotate(deg 3))
-    is (per 40 <&>> per 60 <&>> per 80) .>
-      trans (scale(dec 1.1) <<>> rotate(neg (deg 3)))
-    is (per 100) .>
-      trans (scale one <<>> rotate zero)
+    is (0%) .>
+      transform =: scale(1)
+
+    is (10%) . or is (20%) .>
+      transform =: scale(0.9) <<>> rotate((-3)deg)
+
+    is (30%) . or is (50%) . or is (70%) . or is (90%) .>
+      transform =: scale(1.1) <<>> rotate(3deg)
+
+    is (40%) . or is (60%) . or is (80%) .>
+      transform =: scale(1.1) <<>> rotate((-3)deg)
+
+    is (100%) .>
+      transform =: scale(1) <<>> rotate(0)
+
 instance Theme Tada where
     theme c = renderAnimationStyles "tada" tadaAnimation
 
 data Pulse = Pulse
 pulse = SomeInTheme Pulse
 pulseAnimation = simpleStaticAnimation "pulse" 750 $ do
-    is (per 0) .> do
-      trans (scale one)
-      opacity =: one
-    is (per 50) .> do
-      trans (scale (dec 0.9))
-      opacity =: dec 0.7
-    is (per 100) .> do
-        trans (scale one)
-        opacity =: one
+    is (0%) .> do
+      transform =: scale(1)
+      opacity   =: 1
+
+    is (50%) .> do
+      transform =: scale(0.9)
+      opacity   =: 0.7
+
+    is (100%) .> do
+        transform =: scale(1)
+        opacity   =: 1
+
 instance Theme Pulse where
     theme c = renderAnimationStyles c pulseAnimation
 
@@ -1366,7 +1598,9 @@ data Jiggle = Jiggle
 jiggle = SomeInTheme Jiggle
 jiggleAnimation = simpleStaticAnimation "jiggle" 750 $ do
     let fs = [ (0,1,1,1), (30,1.25,0.75,1), (40,0.75,1.25,1), (50,1.15,0.85,1), (65,0.95,1.05,1), (75,1.05,0.95,1), (100,1,1,1) ]
-    for_ fs $ \(p,x,y,z) -> is (per p) .> trans ("scale3d(" <> dec x <&>> dec y <&>> dec z <> ")")
+    for_ fs $ \(p,x,y,z) -> 
+        is (p%) .> 
+            transform =: scale3d(x,y,z) 
 instance Theme Jiggle where
     theme c = renderAnimationStyles c jiggleAnimation
 
@@ -1374,17 +1608,19 @@ data Glow = Glow
 glow = SomeInTheme Glow
 glowAnimation = StaticAnimationStyles 
     { animationStyles = defaultAnimationStyles
+
     , onTransition = void $ apply $ do
-          animDur 2000 
-          animName "glow"
-          animTiming (0.19,1,0.22,1)
-    , onAnimation = void $ keyframes "glow" $ do
-        is (per 0) .> 
-          backgroundColor =: "#FCFCFD"
-        is (per 30) .>
-          backgroundColor =: "#FFF6CD"
-        is (per 100) .>
-          backgroundColor =: "#FCFCFD"
+          animation-duration =: 2000 
+          animation-name =: "glow"
+          animation-timing-function =: cubez(0.19,1,0.22,1)
+
+    , onAnimation = void $ atKeyframes "glow" $ do
+        is (0%) .> 
+          background-color =: hex 0xFCFCFD
+        is (30%) .>
+          background-color =: hex 0xFFF6CD
+        is (100%) .>
+          background-color =: hex 0xFCFCFD
     }
 instance Theme Glow where
     theme c = renderAnimationStyles c glowAnimation
