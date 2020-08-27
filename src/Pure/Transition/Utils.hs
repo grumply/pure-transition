@@ -1,5 +1,6 @@
-{-# LANGUAGE OverloadedStrings, ViewPatterns #-}
 module Pure.Transition.Utils where
+
+import Pure.Elm
 
 import Control.Applicative
 import Control.Monad.ST
@@ -7,10 +8,7 @@ import Data.Foldable
 import Data.Maybe
 import Data.Monoid
 import Data.STRef
-
-import Pure.Data.CSS
-
-import Pure.Data.Styles
+ 
 
 -- This is hideous; functionalize.
 {-# INLINE mergeMappings #-}

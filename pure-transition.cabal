@@ -17,14 +17,35 @@ library
   build-depends:
     base,
     pure,
-    pure-css,
+    pure-elm,
     pure-cond,
-    pure-theme,
-    pure-styles,
     pure-txt,
     pure-prop
   exposed-modules: 
     Pure.Transition
+    Pure.Transition.Group
+    Pure.Transition.Transitions
+  other-modules:
     Pure.Transition.Utils
   hs-source-dirs:      src
+  default-extensions:
+    BlockArguments
+    DataKinds
+    DeriveAnyClass
+    DeriveGeneric
+    DuplicateRecordFields
+    ExistentialQuantification
+    FlexibleContexts
+    KindSignatures
+    MultiParamTypeClasses, 
+    MultiWayIf
+    OverloadedStrings
+    PatternSynonyms
+    PostfixOperators 
+    RecordWildCards
+    ScopedTypeVariables
+    TemplateHaskell
+    TypeApplications
+    TypeFamilies
+    ViewPatterns
   default-language:    Haskell2010

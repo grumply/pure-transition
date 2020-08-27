@@ -1,5 +1,4 @@
-{ mkDerivation, base, pure, pure-cond, pure-css, pure-styles
-, pure-theme, pure-txt, pure-prop, stdenv
+{ mkDerivation, base, pure, pure-elm, pure-cond, pure-txt, pure-prop, stdenv
 }:
 mkDerivation {
   pname = "pure-transition";
@@ -8,7 +7,7 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    base pure pure-cond pure-css pure-styles pure-theme pure-txt pure-prop
+    base pure pure-elm pure-cond pure-txt pure-prop
   ];
   license = stdenv.lib.licenses.bsd3;
 }
