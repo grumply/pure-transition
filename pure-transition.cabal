@@ -37,7 +37,8 @@ library
     ExistentialQuantification
     FlexibleContexts
     KindSignatures
-    MultiParamTypeClasses, 
+    LambdaCase
+    MultiParamTypeClasses
     MultiWayIf
     OverloadedStrings
     PatternSynonyms
