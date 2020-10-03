@@ -32,7 +32,7 @@ instance KnownNat duration => Theme (BrowseIn duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -73,7 +73,7 @@ instance KnownNat duration => Theme (BrowseOut duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -111,7 +111,7 @@ instance KnownNat duration => Theme (BrowseOutRight duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -149,7 +149,7 @@ instance KnownNat duration => Theme (DropIn duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -179,7 +179,7 @@ instance KnownNat duration => Theme (DropOut duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -209,7 +209,7 @@ instance KnownNat duration => Theme (FadeIn duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity]
+          will-change =: elems [opacity]
 
         is (subtheme @Entering) do
           apply do
@@ -235,7 +235,7 @@ instance KnownNat duration => Theme (FadeOut duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity]
+          will-change =: elems [opacity]
 
         is (subtheme @Exiting) do
           apply do
@@ -262,7 +262,7 @@ instance (KnownNat delta, KnownNat duration) => Theme (FadeInUp delta duration) 
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -291,7 +291,7 @@ instance (KnownNat delta, KnownNat duration) => Theme (FadeOutUp delta duration)
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -320,7 +320,7 @@ instance (KnownNat delta, KnownNat duration) => Theme (FadeInDown delta duration
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -349,7 +349,7 @@ instance (KnownNat delta, KnownNat duration) => Theme (FadeOutDown delta duratio
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -378,7 +378,7 @@ instance (KnownNat delta, KnownNat duration) => Theme (FadeInLeft delta duration
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -407,7 +407,7 @@ instance (KnownNat delta, KnownNat duration) => Theme (FadeOutLeft delta duratio
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -436,7 +436,7 @@ instance (KnownNat delta, KnownNat duration) => Theme (FadeInRight delta duratio
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -465,7 +465,7 @@ instance (KnownNat delta, KnownNat duration) => Theme (FadeOutRight delta durati
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -493,7 +493,7 @@ instance KnownNat duration => Theme (HorizontalFlipIn duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -521,7 +521,7 @@ instance KnownNat duration => Theme (HorizontalFlipOut duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -549,7 +549,7 @@ instance KnownNat duration => Theme (VerticalFlipIn duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -577,7 +577,7 @@ instance KnownNat duration => Theme (VerticalFlipOut duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -606,7 +606,7 @@ instance (KnownNat scalePercent, KnownNat duration) => Theme (ScaleIn scalePerce
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -635,7 +635,7 @@ instance (KnownNat scalePercent, KnownNat duration) => Theme (ScaleOut scalePerc
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -663,7 +663,7 @@ instance KnownNat duration => Theme (FlyIn duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -709,7 +709,7 @@ instance KnownNat duration => Theme (FlyOut duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -742,7 +742,7 @@ instance KnownNat duration => Theme (FlyInUp duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -783,7 +783,7 @@ instance KnownNat duration => Theme (FlyOutUp duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -816,7 +816,7 @@ instance KnownNat duration => Theme (FlyInDown duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -857,7 +857,7 @@ instance KnownNat duration => Theme (FlyOutDown duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -890,7 +890,7 @@ instance KnownNat duration => Theme (FlyInLeft duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -931,7 +931,7 @@ instance KnownNat duration => Theme (FlyOutLeft duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -960,7 +960,7 @@ instance KnownNat duration => Theme (FlyInRight duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -1001,7 +1001,7 @@ instance KnownNat duration => Theme (FlyOutRight duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -1030,7 +1030,7 @@ instance KnownNat duration => Theme (SlideInDown duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -1059,7 +1059,7 @@ instance KnownNat duration => Theme (SlideOutDown duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -1088,7 +1088,7 @@ instance KnownNat duration => Theme (SlideInUp duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -1117,7 +1117,7 @@ instance KnownNat duration => Theme (SlideOutUp duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -1146,7 +1146,7 @@ instance KnownNat duration => Theme (SlideInLeft duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -1175,7 +1175,7 @@ instance KnownNat duration => Theme (SlideOutLeft duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -1204,7 +1204,7 @@ instance KnownNat duration => Theme (SlideInRight duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -1233,7 +1233,7 @@ instance KnownNat duration => Theme (SlideOutRight duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
 
@@ -1263,7 +1263,7 @@ instance KnownNat duration => Theme (SwingInDown duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -1303,7 +1303,7 @@ instance KnownNat duration => Theme (SwingOutDown duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -1344,7 +1344,7 @@ instance KnownNat duration => Theme (SwingInUp duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -1385,7 +1385,7 @@ instance KnownNat duration => Theme (SwingOutUp duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -1426,7 +1426,7 @@ instance KnownNat duration => Theme (SwingInLeft duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -1467,7 +1467,7 @@ instance KnownNat duration => Theme (SwingOutLeft duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -1508,7 +1508,7 @@ instance KnownNat duration => Theme (SwingInRight duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Entering) do
           apply do
@@ -1549,7 +1549,7 @@ instance KnownNat duration => Theme (SwingOutRight duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity,transform]
+          will-change =: elems [opacity,transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -1590,7 +1590,7 @@ instance KnownNat duration => Theme (ZoomIn duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [transform]
+          will-change =: elems [transform]
 
         is (subtheme @Entering) do
           apply do
@@ -1618,7 +1618,7 @@ instance KnownNat duration => Theme (ZoomOut duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [transform]
+          will-change =: elems [transform]
 
         is (subtheme @Exiting) do
           apply do
@@ -1647,7 +1647,7 @@ instance KnownNat duration => Theme (Flash duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [opacity]
+          will-change =: elems [opacity]
 
         is (subtheme @Entering) do
           apply do
@@ -1673,7 +1673,7 @@ instance KnownNat duration => Theme (Shake duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [transform]
+          will-change =: elems [transform]
 
         is (subtheme @Entering) do
           apply do
@@ -1703,7 +1703,7 @@ instance KnownNat duration => Theme (Bounce duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [transform]
+          will-change =: elems [transform]
 
         is (subtheme @Entering) do
           apply do
@@ -1733,7 +1733,7 @@ instance KnownNat duration => Theme (Tada duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [transform]
+          will-change =: elems [transform]
 
         is (subtheme @Entering) do
           apply do
@@ -1771,7 +1771,7 @@ instance KnownNat duration => Theme (Pulse duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [transform]
+          will-change =: elems [transform]
 
         is (subtheme @Entering) do
           apply do
@@ -1804,7 +1804,7 @@ instance KnownNat duration => Theme (Jiggle duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [transform]
+          will-change =: elems [transform]
 
         is (subtheme @Entering) do
           apply do
@@ -1828,7 +1828,7 @@ instance KnownNat duration => Theme (Glow duration) where
     is c do
       is (subtheme @Transition) do
         apply do
-          will-change =* [transform]
+          will-change =: elems [transform]
 
         is (subtheme @Entering) do
           apply do
