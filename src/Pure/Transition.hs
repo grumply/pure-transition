@@ -79,7 +79,7 @@ data Msg = Receive | Complete
 -- This is just a big state machine - nothing fancy. 
 -- I'm sure I mis-encoded somewhere, though.
 instance Pure Transition where
-  view t = run (App [] [Receive] [] mdl update render) t
+  view t = run (App [] [Receive] [] (pure mdl) update render) t
     where
       mdl | active t    = Model Entering Visible id False
           | otherwise   = Model Exited   Hidden  id False
