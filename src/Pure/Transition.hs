@@ -211,48 +211,42 @@ instance Pure Transition where
 instance Theme Transition where
   theme c =
     is c do
-      apply do
-        animation-iteration-count        =: 1
-        animation-duration               =: 225ms
-        animation-timing-function        =: ease
-        animation-fill-mode              =: both
+      animation-iteration-count        =: 1
+      animation-duration               =: 225ms
+      animation-timing-function        =: ease
+      animation-fill-mode              =: both
 
 instance Theme Animating where
   theme c =
     is c do
       is (subtheme @Transition) do
-        apply do
-          backface-Pure.visibility =: hidden
+        backface-Pure.visibility =: hidden
 
 instance Theme Hidden where
   theme c =
     is c do
       is (subtheme @Transition) do
-        apply do
-          Pure.visibility      =: hidden
-          display              =: none
+        Pure.visibility      =: hidden
+        display              =: none
 
 instance Theme Visible where
   theme c =
     is c do
       is (subtheme @Transition) do
-        apply do
-          important $ display    =: block
-          important $ Pure.visibility =: Pure.visible
+        important $ display    =: block
+        important $ Pure.visibility =: Pure.visible
 
 instance Theme Disabled where
   theme c =
     is c do
       is (subtheme @Transition) do
-        apply do
-          animation-play-state =: paused
+        animation-play-state =: paused
 
 instance Theme Looping where
   theme c =
     is c do
       is (subtheme @Transition) do
-        apply do
-          animation-iteration-count =: infinite
+        animation-iteration-count =: infinite
 
 instance Theme Interrupted where
   theme c = do
@@ -260,11 +254,9 @@ instance Theme Interrupted where
       is (subtheme @Transition) do
         is (subtheme @Looping) do
           is (subtheme @Exiting) do
-            apply do
-              animation-iteration-count =: 1
-          
+            animation-iteration-count =: 1
+        
           is (subtheme @Entering) do
-            apply do
-              animation-iteration-count =: 1
+            animation-iteration-count =: 1
 
 
