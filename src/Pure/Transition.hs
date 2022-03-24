@@ -160,6 +160,7 @@ instance Pure Transition where
           , ..
           }
 
+      render :: Elm Msg => Transition -> Model -> View
       render Transition_ {..} Model {..} =
         let
           animatingTheme =
